@@ -167,30 +167,34 @@ def _ws_connect():
 def _rest_refresh_all():
     """Fallback: refresh all data via REST when WS is down."""
     global _state
-    logger.debug("REST fallback refresh...")
+    logger.info("REST data refresh...")
 
     for tf, key in [("5m", "klines_5m"), ("15m", "klines_15m")]:
         try:
             raw = d.fetch_klines("BTCUSDT", tf, 60)
             klines = d.parse_klines_to_dicts(raw)
-            with _lock:
-                _state[key] = deque(klines[-MAX_KLINES:], maxlen=MAX_KLINES)
-                _state["last_ws_msg_ts"] = time.time()
+            if klines:
+                with _lock:
+                    _state[key] = deque(klines[-MAX_KLINES:], maxlen=MAX_KLINES)
+                    _state["last_ws_msg_ts"] = time.time()
+                logger.info(f"REST: {tf} klines loaded ({len(klines)} candles)")
         except Exception as e:
-            logger.warning(f"REST fallback {tf} failed: {e}")
+            logger.error(f"REST klines {tf} failed: {e}")
 
     try:
         tk = d.fetch_ticker("BTCUSDT")
-        with _lock:
-            _state["ticker"] = {
-                "lastPrice": tk.get("lastPrice", "0"),
-                "priceChangePercent": tk.get("priceChangePercent", "0"),
-                "highPrice": tk.get("highPrice", "0"),
-                "lowPrice": tk.get("lowPrice", "0"),
-                "volume": tk.get("volume", "0"),
-            }
+        if tk and tk.get("lastPrice"):
+            with _lock:
+                _state["ticker"] = {
+                    "lastPrice": str(tk.get("lastPrice", "0")),
+                    "priceChangePercent": str(tk.get("priceChangePercent", "0")),
+                    "highPrice": str(tk.get("highPrice", "0")),
+                    "lowPrice": str(tk.get("lowPrice", "0")),
+                    "volume": str(tk.get("volume", "0")),
+                }
+            logger.info(f"REST: ticker loaded, price={tk.get('lastPrice')}")
     except Exception as e:
-        logger.warning(f"REST fallback ticker failed: {e}")
+        logger.error(f"REST ticker failed: {e}")
 
 
 def start():

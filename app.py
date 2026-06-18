@@ -247,20 +247,64 @@ def predict(klines, supports=None, resistances=None):
 
 
 def build_analysis():
-    """Build full analysis from live feed snapshot — instant, no REST calls."""
+    """Build full analysis from live feed snapshot — instant, no REST calls.
+
+    Falls back to REST if live feed hasn't received data yet.
+    """
+    import data as d
+
     snap = lf.get_snapshot()
 
-    k5 = snap["klines_5m"]
-    k15 = snap["klines_15m"]
-    ticker = snap["ticker"]
-    supports = snap["supports"]
-    resistances = snap["resistances"]
+    k5 = list(snap["klines_5m"])
+    k15 = list(snap["klines_15m"])
+    ticker = dict(snap["ticker"])
+    supports = list(snap["supports"])
+    resistances = list(snap["resistances"])
 
-    price = float(ticker.get("lastPrice", 0))
-    chg24 = round(float(ticker.get("priceChangePercent", 0)), 2)
-    h24 = float(ticker.get("highPrice", 0))
-    l24 = float(ticker.get("lowPrice", 0))
-    v24 = float(ticker.get("volume", 0))
+    # If ticker is empty, try direct REST as emergency fallback
+    if not ticker or not ticker.get("lastPrice"):
+        try:
+            tk = d.fetch_ticker("BTCUSDT")
+            ticker = {
+                "lastPrice": str(tk.get("lastPrice", "0")),
+                "priceChangePercent": str(tk.get("priceChangePercent", "0")),
+                "highPrice": str(tk.get("highPrice", "0")),
+                "lowPrice": str(tk.get("lowPrice", "0")),
+                "volume": str(tk.get("volume", "0")),
+            }
+        except Exception:
+            pass
+
+    # If klines empty, try direct REST
+    if not k5 or len(k5) < 10:
+        try:
+            raw = d.fetch_klines("BTCUSDT", "5m", 60)
+            k5 = d.parse_klines_to_dicts(raw)
+            for k in k5:
+                k["_tf"] = "5m"
+        except Exception:
+            pass
+    else:
+        for k in k5:
+            k["_tf"] = "5m"
+
+    if not k15 or len(k15) < 10:
+        try:
+            raw = d.fetch_klines("BTCUSDT", "15m", 60)
+            k15 = d.parse_klines_to_dicts(raw)
+            for k in k15:
+                k["_tf"] = "15m"
+        except Exception:
+            pass
+    else:
+        for k in k15:
+            k["_tf"] = "15m"
+
+    price = float(ticker.get("lastPrice", 0) or 0)
+    chg24 = round(float(ticker.get("priceChangePercent", 0) or 0), 2)
+    h24 = float(ticker.get("highPrice", 0) or 0)
+    l24 = float(ticker.get("lowPrice", 0) or 0)
+    v24 = float(ticker.get("volume", 0) or 0)
 
     chart = [
         {"t": k["time"], "o": k["open"], "h": k["high"], "l": k["low"], "c": k["close"]}

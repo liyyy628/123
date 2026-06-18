@@ -16,10 +16,10 @@ body{font-family:"Segoe UI","Microsoft YaHei",sans-serif;background:#0a0e17;colo
 .cg{font-size:14px;padding:3px 10px;border-radius:4px;font-weight:600}
 .cg.up{background:rgba(0,212,170,0.15);color:var(--g)}.cg.down{background:rgba(255,77,106,0.15);color:var(--r)}
 .sb{font-size:11px;color:var(--t2)}.sb b{color:#e0e6ed}
-.ct{max-width:1100px;margin:0 auto;padding:14px}
-.pg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.ct{max-width:1200px;margin:0 auto;padding:14px}
 
-/* Card states */
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+/* Cards */
 .pc{background:var(--bg2);border:1px solid var(--br);border-radius:12px;padding:18px 16px;text-align:center;transition:all 0.3s}
 .pc.up{border-color:rgba(0,212,170,0.4);box-shadow:0 0 24px rgba(0,212,170,0.08)}
 .pc.down{border-color:rgba(255,77,106,0.4);box-shadow:0 0 24px rgba(255,77,106,0.08)}
@@ -29,13 +29,11 @@ body{font-family:"Segoe UI","Microsoft YaHei",sans-serif;background:#0a0e17;colo
 .pc.flash{animation:cardFlash 0.6s}
 @keyframes cardFlash{0%{transform:scale(1.02)}100%{transform:scale(1)}}
 
-.ph{font-size:11px;letter-spacing:2px;color:var(--t2);margin-bottom:6px;text-transform:uppercase}
+.ph{font-size:11px;letter-spacing:2px;color:var(--t2);margin-bottom:6px}
 .pa{font-size:52px;line-height:1.1;margin:2px 0;transition:color 0.4s}
 .pa.up{color:var(--g)}.pa.down{color:var(--r)}.pa.leaning_up{color:#80e8ce}.pa.leaning_down{color:#ff99aa}.pa.neutral{color:var(--y)}
 .pl{font-size:15px;font-weight:700;margin:2px 0 10px}
 .pl.up{color:var(--g)}.pl.down{color:var(--r)}.pl.leaning_up{color:#80e8ce}.pl.leaning_down{color:#ff99aa}.pl.neutral{color:var(--y)}
-
-/* Score display */
 .sc{font-size:13px;font-weight:600;padding:2px 0;margin-bottom:6px}
 .sc.up{color:var(--g)}.sc.down{color:var(--r)}.sc.leaning_up{color:#80e8ce}.sc.leaning_down{color:#ff99aa}.sc.neutral{color:var(--y)}
 
@@ -57,20 +55,29 @@ body{font-family:"Segoe UI","Microsoft YaHei",sans-serif;background:#0a0e17;colo
 .fr{display:flex;justify-content:space-between;align-items:center;padding:3px 6px;font-size:11px;border-radius:3px;margin:1px 0}
 .fr.pos{background:rgba(0,212,170,0.04)}.fr.neg{background:rgba(255,77,106,0.04)}
 .fs{font-weight:700;font-size:13px}.fs.pos{color:var(--g)}.fs.neg{color:var(--r)}
-.bg{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+
+/* Charts row */
+.cr{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 .cd{background:var(--bg2);border:1px solid var(--br);border-radius:12px;padding:14px}
-.ct2{font-size:11px;letter-spacing:2px;color:var(--t2);margin-bottom:10px;text-transform:uppercase}
-canvas{width:100%!important;height:260px!important}
-.sm{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.si{text-align:center;background:var(--bg3);padding:10px 6px;border-radius:6px}
-.sv{font-size:17px;font-weight:700}.sl2{font-size:9px;color:var(--t2);margin-top:3px}
+.ct2{font-size:11px;letter-spacing:2px;color:var(--t2);margin-bottom:10px}
+.ch{width:100%!important;height:240px!important}
+
+/* Market overview row */
+.or{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.oi{background:var(--bg2);border:1px solid var(--br);border-radius:10px;padding:14px;text-align:center}
+.ov{font-size:20px;font-weight:700}
+.ol{font-size:10px;color:var(--t2);margin-top:4px;letter-spacing:1px}
+.od{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+
 .ft{text-align:center;padding:10px;color:var(--t2);font-size:10px;border-top:1px solid var(--br);margin-top:14px}
 .ld{width:6px;height:6px;display:inline-block;background:var(--g);border-radius:50%;animation:pk 2s infinite;margin-right:6px}
 @keyframes pk{0%,100%{opacity:1}50%{opacity:0.2}}
 .err{background:var(--bg2);border:1px solid var(--r);padding:20px;text-align:center;border-radius:12px;margin:20px}
 .loading{padding:40px;text-align:center;color:var(--t2);font-size:14px}
 .loading span{animation:pk 1.5s infinite;font-size:20px}
-@media(max-width:768px){.pg,.bg{grid-template-columns:1fr}}
+.lat{font-size:10px;color:var(--t2);text-align:right;padding:2px 14px}
+.lat.good{color:var(--g)}.lat.warn{color:var(--y)}.lat.bad{color:var(--r)}
+@media(max-width:768px){.pg,.cr,.or,.od{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -79,8 +86,10 @@ canvas{width:100%!important;height:260px!important}
   <div><div class="pb" id="price">---</div><div class="cg" id="change24"></div></div>
   <div class="sb">24H高 <b id="h24">---</b>&nbsp;&nbsp;|&nbsp;&nbsp;24H低 <b id="l24">---</b>&nbsp;&nbsp;|&nbsp;&nbsp;量 <b id="v24">---</b>&nbsp;&nbsp;|&nbsp;&nbsp;<span class="ld"></span><b id="ts">---</b></div>
 </div>
+<div class="lat" id="latency"></div>
 
 <div class="ct" id="content" style="display:none">
+  <!-- Prediction Cards -->
   <div class="pg">
     <div class="pc" id="card5m">
       <div class="ph">5分钟预测</div>
@@ -107,34 +116,46 @@ canvas{width:100%!important;height:260px!important}
       <div class="fl" id="fl15"></div>
     </div>
   </div>
-  <div class="bg">
-    <div class="cd"><div class="ct2">15分钟走势</div><canvas id="chart"></canvas></div>
-    <div class="cd"><div class="ct2">盘口概览</div><div class="sm" id="summary"></div></div>
+
+  <!-- Charts Row -->
+  <div class="cr">
+    <div class="cd"><div class="ct2">15分钟K线趋势</div><canvas id="chartTrend" class="ch"></canvas></div>
+    <div class="cd"><div class="ct2">实时价格曲线</div><canvas id="chartLive" class="ch"></canvas></div>
+  </div>
+
+  <!-- Market Overview -->
+  <div class="or" id="overview">
+    <div class="oi"><div class="ov" id="ov5m">--</div><div class="ol">5M预测</div></div>
+    <div class="oi"><div class="ov" id="ov15m">--</div><div class="ol">15M预测</div></div>
+    <div class="oi"><div class="ov" id="ovH">--</div><div class="ol">24H最高</div></div>
+    <div class="oi"><div class="ov" id="ovL">--</div><div class="ol">24H最低</div></div>
+    <div class="od">
+      <div class="oi"><div class="ov" id="ovVol">--</div><div class="ol">24H成交量(BTC)</div></div>
+      <div class="oi"><div class="ov" id="ovChg">--</div><div class="ol">24H涨跌幅</div></div>
+      <div class="oi"><div class="ov" id="ovScore5">--</div><div class="ol">5M评分</div></div>
+      <div class="oi"><div class="ov" id="ovScore15">--</div><div class="ol">15M评分</div></div>
+    </div>
   </div>
 </div>
 
-<div class="err" id="error" style="display:none"><div style="font-size:18px;margin-bottom:8px">连接失败</div><div style="color:var(--t2);font-size:13px" id="errMsg"></div></div>
+<div class="err" id="error" style="display:none"><div style="font-size:18px;margin-bottom:8px">连接中...</div><div style="color:var(--t2);font-size:13px" id="errMsg"></div></div>
 <div class="loading" id="loading"><span>●</span> 加载中...</div>
-<div class="ft">BTC/USDT 方向预测 · 7因子评分 · <span id="rh"></span></div>
+<div class="ft">BTC/USDT 实时方向预测 · 7因子评分 · WebSocket · <span id="rh"></span></div>
 
 <script>
-var chart = null;
+var chartTrend = null, chartLive = null;
 var tried = 0;
 var lastDir = {5:'neutral',15:'neutral'};
+var livePrices = []; // Rolling real-time prices
 
 function icon(d){
-  if (d=='up') return '↑↑';
-  if (d=='leaning_up') return '↑';
-  if (d=='down') return '↓↓';
-  if (d=='leaning_down') return '↓';
+  if(d=='up') return '↑↑'; if(d=='leaning_up') return '↑';
+  if(d=='down') return '↓↓'; if(d=='leaning_down') return '↓';
   return '↔';
 }
-
 function txt(d){
-  if (d=='up') return '强烈看涨';
-  if (d=='leaning_up') return '偏多';
-  if (d=='down') return '强烈看跌';
-  if (d=='leaning_down') return '偏空';
+  if(d=='up') return '强烈看涨'; if(d=='leaning_up') return '偏多';
+  if(d=='down') return '强烈看跌'; if(d=='leaning_down') return '偏空';
   return '震荡';
 }
 
@@ -143,140 +164,142 @@ function update(d) {
   document.getElementById('content').style.display = 'block';
   document.getElementById('error').style.display = 'none';
 
-  document.getElementById('price').textContent = '$' + d.price.toLocaleString();
+  // Header
+  document.getElementById('price').textContent = '$' + (d.price||0).toLocaleString();
   var c = document.getElementById('change24');
-  c.textContent = (d.change24>=0?'+':'') + d.change24 + '%';
-  c.className = 'cg ' + (d.change24>=0?'up':'down');
-  document.getElementById('h24').textContent = '$' + Math.round(d.high24).toLocaleString();
-  document.getElementById('l24').textContent = '$' + Math.round(d.low24).toLocaleString();
-  document.getElementById('v24').textContent = Math.round(d.vol24).toLocaleString() + ' BTC';
+  var chg = d.change24||0;
+  c.textContent = (chg>=0?'+':'') + chg + '%';
+  c.className = 'cg ' + (chg>=0?'up':'down');
+  document.getElementById('h24').textContent = '$' + Math.round(d.high24||0).toLocaleString();
+  document.getElementById('l24').textContent = '$' + Math.round(d.low24||0).toLocaleString();
+  document.getElementById('v24').textContent = Math.round(d.vol24||0).toLocaleString() + ' BTC';
   document.getElementById('ts').textContent = (d.ts||'').replace(' UTC','');
-  document.getElementById('rh').textContent = '刷新: ' + new Date().toLocaleTimeString();
+  document.getElementById('rh').textContent = '更新: ' + new Date().toLocaleTimeString();
+
+  // Latency indicator
+  var lat = document.getElementById('latency');
+  var age = d.ws_age_ms||0;
+  if(age < 500) { lat.textContent = '数据延迟: ' + age + 'ms | ' + (d.ws_connected?'WebSocket':'REST'); lat.className = 'lat good'; }
+  else if(age < 2000) { lat.textContent = '数据延迟: ' + (age/1000).toFixed(1) + 's | ' + (d.ws_connected?'WebSocket':'REST'); lat.className = 'lat warn'; }
+  else { lat.textContent = '数据延迟: ' + (age/1000).toFixed(1) + 's | 重连中...'; lat.className = 'lat bad'; }
 
   // Prediction cards
   [['5m',d.pred_5m,'5'],['15m',d.pred_15m,'15']].forEach(function(v){
-    var id = v[2];
-    var p = v[1]; if(!p) return;
+    var id = v[2]; var p = v[1]; if(!p) return;
     var dir = p.direction;
-
-    // Flash animation on direction change
     var card = document.getElementById('card'+id+'m');
-    if (lastDir[id] !== dir) {
-      card.classList.remove('flash');
-      void card.offsetWidth; // reflow
-      card.classList.add('flash');
+    if(lastDir[id] !== dir) {
+      card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
       lastDir[id] = dir;
     }
     card.className = 'pc ' + dir;
-
     document.getElementById('a'+id).textContent = icon(dir);
     document.getElementById('a'+id).className = 'pa ' + dir;
     document.getElementById('l'+id).textContent = txt(dir);
     document.getElementById('l'+id).className = 'pl ' + dir;
-
-    // Score display
-    var sc = document.getElementById('sc'+id);
-    sc.textContent = '评分: ' + (p.total_score>0?'+':'') + p.total_score;
-    sc.className = 'sc ' + dir;
-
+    document.getElementById('sc'+id).textContent = '评分: ' + (p.total_score>0?'+':'') + p.total_score;
+    document.getElementById('sc'+id).className = 'sc ' + dir;
     document.getElementById('conf'+id).textContent = p.confidence + '% 置信度';
     document.getElementById('bf'+id).style.width = p.confidence + '%';
     document.getElementById('bf'+id).className = 'bf ' + dir;
     document.getElementById('pf'+id).style.width = p.candle_pct + '%';
     document.getElementById('pt'+id).textContent = 'K线进度 ' + p.candle_pct + '%';
     document.getElementById('ci'+id).innerHTML =
-      '<div><div class="cl">开盘</div><div class="cv">$' + p.open_price.toLocaleString() + '</div></div>'+
-      '<div><div class="cl">当前</div><div class="cv" style="color:'+(p.change_pct>=0?'var(--g)':'var(--r)')+'">$' + p.price.toLocaleString() + '</div></div>'+
-      '<div><div class="cl">涨跌</div><div class="cv" style="color:'+(p.change_pct>=0?'var(--g)':'var(--r)')+'">'+(p.change_pct>=0?'+':'')+p.change_pct.toFixed(4)+'%</div></div>'+
+      '<div><div class="cl">开盘</div><div class="cv">$' + (p.open_price||0).toLocaleString() + '</div></div>'+
+      '<div><div class="cl">当前</div><div class="cv" style="color:'+(p.change_pct>=0?'var(--g)':'var(--r)')+'">$' + (p.price||0).toLocaleString() + '</div></div>'+
+      '<div><div class="cl">涨跌</div><div class="cv" style="color:'+(p.change_pct>=0?'var(--g)':'var(--r)')+'">'+(p.change_pct>=0?'+':'')+(p.change_pct||0).toFixed(4)+'%</div></div>'+
       '<div><div class="cl">状态</div><div class="cv" style="color:'+(p.change_pct>=0?'var(--g)':'var(--r)')+'">'+p.candle_status+'</div></div>';
     var fh = '';
     p.factors.forEach(function(f){
       var cl = f.score>0?'pos':(f.score<0?'neg':'');
-      fh += '<div class="fr ' + cl + '"><span>' + f.name + ' <span style="color:var(--t2);font-size:10px">' + f.detail + '</span></span><span class="fs ' + cl + '">' + (f.score>0?'+':'') + f.score + '</span></div>';
+      fh += '<div class="fr '+cl+'"><span>'+f.name+' <span style="color:var(--t2);font-size:10px">'+f.detail+'</span></span><span class="fs '+cl+'">'+(f.score>0?'+':'')+f.score+'</span></div>';
     });
     document.getElementById('fl'+id).innerHTML = fh;
   });
 
-  if (typeof Chart !== 'undefined') { updateChart(d.chart||[]); }
+  // Charts
+  if(typeof Chart !== 'undefined') {
+    updateTrendChart(d.chart||[]);
+    updateLiveChart(d.chart||[]);
+  }
 
-  // Summary
-  document.getElementById('summary').innerHTML =
-    '<div class="si"><div class="sv">'+icon(d.pred_5m.direction)+' '+txt(d.pred_5m.direction)+'</div><div class="sl2">5M预测</div></div>'+
-    '<div class="si"><div class="sv">'+icon(d.pred_15m.direction)+' '+txt(d.pred_15m.direction)+'</div><div class="sl2">15M预测</div></div>'+
-    '<div class="si"><div class="sv">$'+Math.round(d.high24).toLocaleString()+'</div><div class="sl2">24H高</div></div>'+
-    '<div class="si"><div class="sv">$'+Math.round(d.low24).toLocaleString()+'</div><div class="sl2">24H低</div></div>';
+  // Market overview
+  var p5 = d.pred_5m||{}, p15 = d.pred_15m||{};
+  document.getElementById('ov5m').textContent = icon(p5.direction||'neutral') + ' ' + txt(p5.direction||'neutral');
+  document.getElementById('ov15m').textContent = icon(p15.direction||'neutral') + ' ' + txt(p15.direction||'neutral');
+  document.getElementById('ovH').textContent = '$' + Math.round(d.high24||0).toLocaleString();
+  document.getElementById('ovL').textContent = '$' + Math.round(d.low24||0).toLocaleString();
+  document.getElementById('ovVol').textContent = Math.round(d.vol24||0).toLocaleString();
+  document.getElementById('ovChg').textContent = (chg>=0?'+':'') + chg + '%';
+  document.getElementById('ovScore5').textContent = (p5.total_score>0?'+':'') + (p5.total_score||0);
+  document.getElementById('ovScore15').textContent = (p15.total_score>0?'+':'') + (p15.total_score||0);
 }
 
-function updateChart(data) {
-  if (!data || !data.length) return;
+// 15-minute trend chart (40 candles)
+function updateTrendChart(data) {
+  if(!data||!data.length) return;
   try {
-    var labels = data.map(function(c){var d=new Date(c.t);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');});
-    var closes = data.map(function(c){return c.c;});
-    if (chart) chart.destroy();
-    var ctx = document.getElementById('chart');
-    ctx.height = 260;
-    chart = new Chart(ctx.getContext('2d'),{
+    var xl = data.map(function(c){var d=new Date(c.t);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');});
+    var yl = data.map(function(c){return c.c;});
+    var ctx = document.getElementById('chartTrend');
+    if(chartTrend) chartTrend.destroy();
+    chartTrend = new Chart(ctx.getContext('2d'),{
       type:'line',
-      data:{labels:labels,datasets:[{data:closes,borderColor:'#f0b90b',backgroundColor:'rgba(240,185,11,0.06)',borderWidth:1.5,pointRadius:0,fill:true,tension:0.1}]},
+      data:{labels:xl,datasets:[{data:yl,borderColor:'#f0b90b',backgroundColor:'rgba(240,185,11,0.06)',borderWidth:1.5,pointRadius:0,fill:true,tension:0.1}]},
       options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
         scales:{x:{ticks:{color:'#4a5568',font:{size:9},maxTicksLimit:8},grid:{color:'rgba(31,41,55,0.3)'}},
                 y:{position:'right',ticks:{color:'#4a5568',font:{size:9},callback:function(v){return '$'+v.toLocaleString();}},grid:{color:'rgba(31,41,55,0.3)'}}}}
     });
-  } catch(e) { console.error('Chart error:', e); }
+  } catch(e){console.error('Trend chart:',e);}
 }
 
+// Real-time live curve (last 20 candles, faster update)
+function updateLiveChart(data) {
+  if(!data||!data.length) return;
+  try {
+    var recent = data.slice(-20);
+    var xl = recent.map(function(c){var d=new Date(c.t);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');});
+    var yl = recent.map(function(c){return c.c;});
+    var ctx = document.getElementById('chartLive');
+    if(chartLive) chartLive.destroy();
+    chartLive = new Chart(ctx.getContext('2d'),{
+      type:'line',
+      data:{labels:xl,datasets:[{data:yl,borderColor:'#4da6ff',backgroundColor:'rgba(77,166,255,0.06)',borderWidth:2,pointRadius:1,pointBackgroundColor:'#4da6ff',fill:true,tension:0.3}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:false}},
+        scales:{x:{ticks:{color:'#4a5568',font:{size:9},maxTicksLimit:6},grid:{color:'rgba(31,41,55,0.3)'}},
+                y:{position:'right',ticks:{color:'#4a5568',font:{size:9},callback:function(v){return '$'+v.toLocaleString();}},grid:{color:'rgba(31,41,55,0.3)'}}}}
+    });
+  } catch(e){console.error('Live chart:',e);}
+}
+
+// ---- SSE ----
 var es = null;
-
 function connectSSE() {
-  if (es) { es.close(); }
+  if(es) es.close();
   es = new EventSource('/api/stream');
-
-  es.onmessage = function(e) {
-    try {
-      var d = JSON.parse(e.data);
-      if (d.ok) { update(d); tried = 0; }
-    } catch(err) { console.error('SSE parse error:', err); }
+  es.onmessage = function(e){
+    try{ var d=JSON.parse(e.data); if(d.ok){update(d);tried=0;} }catch(err){}
   };
-
-  es.onerror = function() {
-    // SSE disconnected — will auto-reconnect. Fallback to REST if needed
+  es.onerror = function(){
     tried++;
-    if (tried > 5) {
-      es.close();
-      // Fallback: poll REST every 500ms
-      setInterval(function(){
-        fetch('/api/analysis').then(function(r){ return r.json(); }).then(function(d){
-          if(d.ok) update(d);
-        }).catch(function(){});
-      }, 500);
-    }
+    if(tried>5){es.close(); setInterval(function(){fetch('/api/analysis').then(function(r){return r.json();}).then(function(d){if(d.ok)update(d);}).catch(function(){});},500);}
   };
-
-  es.onopen = function() {
-    tried = 0;
-    document.getElementById('loading').style.display = 'none';
-  };
+  es.onopen = function(){tried=0;document.getElementById('loading').style.display='none';};
 }
 
-function showErr(msg) {
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('content').style.display = 'none';
-  document.getElementById('error').style.display = 'block';
-  document.getElementById('errMsg').textContent = msg;
+function showErr(msg){
+  document.getElementById('loading').style.display='none';
+  document.getElementById('content').style.display='none';
+  document.getElementById('error').style.display='block';
+  document.getElementById('errMsg').textContent=msg;
 }
 
-function start() {
-  // Initial load via REST to show data immediately
-  fetch('/api/analysis').then(function(r){ return r.json(); }).then(function(d){
-    if(d.ok) update(d);
-  }).catch(function(){});
-
-  // Then switch to SSE for real-time updates
+function start(){
+  fetch('/api/analysis').then(function(r){return r.json();}).then(function(d){if(d.ok)update(d);}).catch(function(){});
   connectSSE();
 }
-
-document.addEventListener('DOMContentLoaded', start);
-if (document.readyState === 'interactive' || document.readyState === 'complete') start();
+document.addEventListener('DOMContentLoaded',start);
+if(document.readyState==='interactive'||document.readyState==='complete')start();
 </script>
 </body>
 </html>
