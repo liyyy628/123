@@ -4,10 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>BTC Direction Predictor</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"Segoe UI","Microsoft YaHei",sans-serif;background:#0a0e17;color:#e0e6ed;min-height:100vh}
-:root{--bg:#0a0e17;--bg2:#111827;--bg3:#1a2236;--g:#00d4aa;--r:#ff4d6a;--y:#f0b90b;--b:#4da6ff;--br:#1f2937;--t2:#6b7280}
+:root{--bg:#0a0e17;--bg2:#111827;--bg3:#1a2236;--g:#00d4aa;--r:#ff4d6a;--y:#f0b90b;--b:#4da6ff;--o:#ff9800;--br:#1f2937;--t2:#6b7280}
 
 .header{background:var(--bg2);border-bottom:1px solid var(--br);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 .logo{font-size:22px;font-weight:800;color:var(--y);letter-spacing:2px}
@@ -17,19 +18,33 @@ body{font-family:"Segoe UI","Microsoft YaHei",sans-serif;background:#0a0e17;colo
 .sb{font-size:11px;color:var(--t2)}.sb b{color:#e0e6ed}
 .ct{max-width:1100px;margin:0 auto;padding:14px}
 .pg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+
+/* Card states */
 .pc{background:var(--bg2);border:1px solid var(--br);border-radius:12px;padding:18px 16px;text-align:center;transition:all 0.3s}
-.pc.up{border-color:rgba(0,212,170,0.4);box-shadow:0 0 24px rgba(0,212,170,0.05)}
-.pc.down{border-color:rgba(255,77,106,0.4);box-shadow:0 0 24px rgba(255,77,106,0.05)}
+.pc.up{border-color:rgba(0,212,170,0.4);box-shadow:0 0 24px rgba(0,212,170,0.08)}
+.pc.down{border-color:rgba(255,77,106,0.4);box-shadow:0 0 24px rgba(255,77,106,0.08)}
+.pc.leaning_up{border-color:rgba(0,212,170,0.2);box-shadow:0 0 16px rgba(0,212,170,0.03)}
+.pc.leaning_down{border-color:rgba(255,77,106,0.2);box-shadow:0 0 16px rgba(255,77,106,0.03)}
 .pc.neutral{border-color:rgba(240,185,11,0.3)}
+.pc.flash{animation:cardFlash 0.6s}
+@keyframes cardFlash{0%{transform:scale(1.02)}100%{transform:scale(1)}}
+
 .ph{font-size:11px;letter-spacing:2px;color:var(--t2);margin-bottom:6px;text-transform:uppercase}
-.pa{font-size:52px;line-height:1.1;margin:2px 0}
-.pa.up{color:var(--g)}.pa.down{color:var(--r)}.pa.neutral{color:var(--y)}
+.pa{font-size:52px;line-height:1.1;margin:2px 0;transition:color 0.4s}
+.pa.up{color:var(--g)}.pa.down{color:var(--r)}.pa.leaning_up{color:#80e8ce}.pa.leaning_down{color:#ff99aa}.pa.neutral{color:var(--y)}
 .pl{font-size:15px;font-weight:700;margin:2px 0 10px}
-.pl.up{color:var(--g)}.pl.down{color:var(--r)}.pl.neutral{color:var(--y)}
+.pl.up{color:var(--g)}.pl.down{color:var(--r)}.pl.leaning_up{color:#80e8ce}.pl.leaning_down{color:#ff99aa}.pl.neutral{color:var(--y)}
+
+/* Score display */
+.sc{font-size:13px;font-weight:600;padding:2px 0;margin-bottom:6px}
+.sc.up{color:var(--g)}.sc.down{color:var(--r)}.sc.leaning_up{color:#80e8ce}.sc.leaning_down{color:#ff99aa}.sc.neutral{color:var(--y)}
+
 .bw{background:var(--bg3);border-radius:6px;height:6px;margin:6px 0;overflow:hidden}
 .bf{height:100%;border-radius:6px;transition:width 0.4s}
 .bf.up{background:linear-gradient(90deg,var(--g),#00ffcc)}
 .bf.down{background:linear-gradient(90deg,var(--r),#ff8099)}
+.bf.leaning_up{background:linear-gradient(90deg,#80e8ce,#00d4aa)}
+.bf.leaning_down{background:linear-gradient(90deg,#ff99aa,#ff4d6a)}
 .bf.neutral{background:linear-gradient(90deg,var(--y),#ffe066)}
 .bv{font-size:24px;font-weight:800}
 .ci{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px}
@@ -71,6 +86,7 @@ canvas{width:100%!important;height:260px!important}
       <div class="ph">5分钟预测</div>
       <div class="pa" id="a5">--</div>
       <div class="pl" id="l5">--</div>
+      <div class="sc" id="sc5"></div>
       <div class="bv" id="conf5">--</div>
       <div class="bw"><div class="bf" id="bf5" style="width:0%"></div></div>
       <div class="pb2"><div class="pf2" id="pf5" style="width:0%"></div></div>
@@ -82,6 +98,7 @@ canvas{width:100%!important;height:260px!important}
       <div class="ph">15分钟预测</div>
       <div class="pa" id="a15">--</div>
       <div class="pl" id="l15">--</div>
+      <div class="sc" id="sc15"></div>
       <div class="bv" id="conf15">--</div>
       <div class="bw"><div class="bf" id="bf15" style="width:0%"></div></div>
       <div class="pb2"><div class="pf2" id="pf15" style="width:0%"></div></div>
@@ -98,14 +115,28 @@ canvas{width:100%!important;height:260px!important}
 
 <div class="err" id="error" style="display:none"><div style="font-size:18px;margin-bottom:8px">连接失败</div><div style="color:var(--t2);font-size:13px" id="errMsg"></div></div>
 <div class="loading" id="loading"><span>●</span> 加载中...</div>
-<div class="ft">BTC/USDT 方向预测 · 5因子评分 · <span id="rh"></span></div>
+<div class="ft">BTC/USDT 方向预测 · 7因子评分 · <span id="rh"></span></div>
 
 <script>
 var chart = null;
 var tried = 0;
+var lastDir = {5:'neutral',15:'neutral'};
 
-function icon(d){return d=='up'?'\u2191':(d=='down'?'\u2193':'\u2194');}
-function txt(d){return d=='up'?'看涨':(d=='down'?'看跌':'震荡');}
+function icon(d){
+  if (d=='up') return '↑↑';
+  if (d=='leaning_up') return '↑';
+  if (d=='down') return '↓↓';
+  if (d=='leaning_down') return '↓';
+  return '↔';
+}
+
+function txt(d){
+  if (d=='up') return '强烈看涨';
+  if (d=='leaning_up') return '偏多';
+  if (d=='down') return '强烈看跌';
+  if (d=='leaning_down') return '偏空';
+  return '震荡';
+}
 
 function update(d) {
   document.getElementById('loading').style.display = 'none';
@@ -123,15 +154,31 @@ function update(d) {
   document.getElementById('rh').textContent = '刷新: ' + new Date().toLocaleTimeString();
 
   // Prediction cards
-  [['5m',d.pred_5m],['15m',d.pred_15m]].forEach(function(v){
-    var id = v[0]=='5m'?'5':'15';
+  [['5m',d.pred_5m,'5'],['15m',d.pred_15m,'15']].forEach(function(v){
+    var id = v[2];
     var p = v[1]; if(!p) return;
     var dir = p.direction;
-    document.getElementById('card'+id+'m').className = 'pc ' + dir;
+
+    // Flash animation on direction change
+    var card = document.getElementById('card'+id+'m');
+    if (lastDir[id] !== dir) {
+      card.classList.remove('flash');
+      void card.offsetWidth; // reflow
+      card.classList.add('flash');
+      lastDir[id] = dir;
+    }
+    card.className = 'pc ' + dir;
+
     document.getElementById('a'+id).textContent = icon(dir);
     document.getElementById('a'+id).className = 'pa ' + dir;
     document.getElementById('l'+id).textContent = txt(dir);
     document.getElementById('l'+id).className = 'pl ' + dir;
+
+    // Score display
+    var sc = document.getElementById('sc'+id);
+    sc.textContent = '评分: ' + (p.total_score>0?'+':'') + p.total_score;
+    sc.className = 'sc ' + dir;
+
     document.getElementById('conf'+id).textContent = p.confidence + '% 置信度';
     document.getElementById('bf'+id).style.width = p.confidence + '%';
     document.getElementById('bf'+id).className = 'bf ' + dir;
@@ -150,9 +197,7 @@ function update(d) {
     document.getElementById('fl'+id).innerHTML = fh;
   });
 
-  // Chart - check Chart.js loaded
-  if (typeof Chart === 'undefined') return;
-  updateChart(d.chart||[]);
+  if (typeof Chart !== 'undefined') { updateChart(d.chart||[]); }
 
   // Summary
   document.getElementById('summary').innerHTML =
@@ -201,7 +246,6 @@ function showErr(msg) {
   document.getElementById('errMsg').textContent = msg;
 }
 
-// Wait for DOM + Chart.js, then start
 function start() {
   var wait = 0;
   function check() {
@@ -221,7 +265,6 @@ function start() {
 }
 
 document.addEventListener('DOMContentLoaded', start);
-// Also try immediate if DOM already loaded
 if (document.readyState === 'interactive' || document.readyState === 'complete') start();
 </script>
 </body>

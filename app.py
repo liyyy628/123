@@ -199,10 +199,29 @@ def predict(klines, supports=None, resistances=None):
     })
 
     # ---- Confidence / Direction ----
-    conf = round(min(abs(score) / 120 * 100, 95), 1)
-    d = "up" if score > 5 else ("down" if score < -5 else "neutral")
+    # Dynamic direction with finer granularity:
+    #   score > 5  → strong up     (看涨)
+    #   score 2~5  → leaning up    (偏多)
+    #   score -2~2 → neutral       (震荡)
+    #   score -5~-2→ leaning down  (偏空)
+    #   score < -5 → strong down   (看跌)
+    abs_score = abs(score)
+    if score > 5:
+        d = "up"
+    elif score > 2:
+        d = "leaning_up"
+    elif score >= -2:
+        d = "neutral"
+    elif score >= -5:
+        d = "leaning_down"
+    else:
+        d = "down"
+
+    conf = round(min(abs_score / 100 * 100, 95), 1)
     if d == "neutral":
-        conf = max(conf, 50 - abs(score) * 2)
+        conf = max(conf, 50 - abs_score)
+    elif d in ("leaning_up", "leaning_down"):
+        conf = round(min(abs_score / 7 * 60 + 20, 70), 1)
 
     # ---- Candle progress ----
     now = datetime.now(timezone.utc)
