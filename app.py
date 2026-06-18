@@ -387,9 +387,26 @@ def api_stream():
     )
 
 
+# --- Startup ---
+# Start live feed eagerly so it runs under both `python app.py` and gunicorn.
+# Use a one-shot flag to avoid double-init with gunicorn preload.
+_started = False
+_start_lock = threading.Lock()
+
+
+def _ensure_live_feed():
+    global _started
+    with _start_lock:
+        if not _started:
+            _started = True
+            print("Starting Binance live feed (WebSocket + REST fallback)...")
+            lf.start()
+            print("Live feed initialized.")
+
+
+# Initialize live feed when module is imported (covers gunicorn)
+_ensure_live_feed()
+
+
 if __name__ == "__main__":
-    # Start WebSocket feed before Flask
-    print("Starting live feed...")
-    lf.start()
-    print("Live feed ready, starting Flask server...")
     app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
