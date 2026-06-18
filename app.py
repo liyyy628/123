@@ -1,22 +1,26 @@
 # -*- coding: utf-8 -*-
-"""BTC 5M/15M Direction Predictor - Binance data source"""
+"""BTC 5M/15M Direction Predictor — Real-time WebSocket + SSE
+
+Data latency: < 300ms via Binance WebSocket combined stream.
+Browser receives updates via Server-Sent Events (SSE).
+"""
 import json
 import threading
 import time
 from datetime import datetime, timezone
 
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, Response, request
 
-import data as d
-from indicators import ema, rsi_current, find_support_resistance
+import live_feed as lf
+from indicators import ema, rsi_current
 
 app = Flask(__name__)
 import logging
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
-_lock = threading.Lock()
-_cache = None
-_last_refresh = 0.0
+# SSE clients set
+_sse_clients = set()
+_sse_lock = threading.Lock()
 
 
 def predict(klines, supports=None, resistances=None):
@@ -125,7 +129,7 @@ def predict(klines, supports=None, resistances=None):
     else:
         factors.append({"name": "EMA", "score": 0, "detail": "N/A"})
 
-    # ---- Factor 6: Support/Resistance gap from opening price ----
+    # ---- Factor 6: Support/Resistance gap ----
     sr_score = 0
     sr_detail = "N/A"
     if supports or resistances:
@@ -135,7 +139,6 @@ def predict(klines, supports=None, resistances=None):
             nearest_support = min(supports, key=lambda s: abs(opn - s))
         if resistances:
             nearest_resistance = min(resistances, key=lambda r: abs(opn - r))
-        gap_pct = 0
         if nearest_support and nearest_resistance:
             gap_pct = (nearest_resistance - opn) / (nearest_resistance - nearest_support)
             if gap_pct < 0.3:
@@ -199,12 +202,6 @@ def predict(klines, supports=None, resistances=None):
     })
 
     # ---- Confidence / Direction ----
-    # Dynamic direction with finer granularity:
-    #   score > 5  → strong up     (看涨)
-    #   score 2~5  → leaning up    (偏多)
-    #   score -2~2 → neutral       (震荡)
-    #   score -5~-2→ leaning down  (偏空)
-    #   score < -5 → strong down   (看跌)
     abs_score = abs(score)
     if score > 5:
         d = "up"
@@ -226,7 +223,6 @@ def predict(klines, supports=None, resistances=None):
     # ---- Candle progress ----
     now = datetime.now(timezone.utc)
     secs = 300 if klines[0].get("_tf") == "5m" else 900
-    # Default to 5m candle progress if not specified
     if klines[0].get("_tf") == "15m":
         secs = 900
     c_start = now.replace(second=0, microsecond=0)
@@ -250,34 +246,21 @@ def predict(klines, supports=None, resistances=None):
     }
 
 
-def analyze():
-    """Fetch data from Binance and build full analysis payload."""
-    # Fetch 5m and 15m klines, plus ticker
-    r5_raw = d.fetch_klines("BTCUSDT", "5m", 60)
-    r15_raw = d.fetch_klines("BTCUSDT", "15m", 60)
-    tk = d.fetch_ticker("BTCUSDT")
+def build_analysis():
+    """Build full analysis from live feed snapshot — instant, no REST calls."""
+    snap = lf.get_snapshot()
 
-    k5 = d.parse_klines_to_dicts(r5_raw)
-    k15 = d.parse_klines_to_dicts(r15_raw)
+    k5 = snap["klines_5m"]
+    k15 = snap["klines_15m"]
+    ticker = snap["ticker"]
+    supports = snap["supports"]
+    resistances = snap["resistances"]
 
-    # Tag each dict with its timeframe for candle progress
-    for k in k5:
-        k["_tf"] = "5m"
-    for k in k15:
-        k["_tf"] = "15m"
-
-    price = float(tk["lastPrice"])
-    chg24 = round(float(tk["priceChangePercent"]), 2)
-    h24 = float(tk["highPrice"])
-    l24 = float(tk["lowPrice"])
-    v24 = float(tk["volume"])
-
-    # Compute support/resistance from 1h data for Factor 6
-    r1h_raw = d.fetch_klines("BTCUSDT", "1h", 60)
-    k1h = d.parse_klines_to_dicts(r1h_raw)
-    sr = find_support_resistance(k1h, 50) if k1h else {}
-    supports = sr.get("support", [])
-    resistances = sr.get("resistance", [])
+    price = float(ticker.get("lastPrice", 0))
+    chg24 = round(float(ticker.get("priceChangePercent", 0)), 2)
+    h24 = float(ticker.get("highPrice", 0))
+    l24 = float(ticker.get("lowPrice", 0))
+    v24 = float(ticker.get("volume", 0))
 
     chart = [
         {"t": k["time"], "o": k["open"], "h": k["high"], "l": k["low"], "c": k["close"]}
@@ -295,19 +278,14 @@ def analyze():
         "pred_5m": predict(k5, supports, resistances),
         "pred_15m": predict(k15, supports, resistances),
         "chart": chart,
+        "ws_age_ms": snap["ws_age_ms"],
+        "ws_connected": snap["ws_connected"],
     }
 
 
-def refresh():
-    global _cache, _last_refresh
-    try:
-        d = analyze()
-        with _lock:
-            _cache = d
-            _last_refresh = time.time()
-    except Exception as e:
-        print(f"Refresh error: {e}")
-
+# ═══════════════════════════════════════════════════════════════════
+# Routes
+# ═══════════════════════════════════════════════════════════════════
 
 @app.route("/")
 def index():
@@ -315,19 +293,59 @@ def index():
 
 
 @app.route("/api/analysis")
-def api():
-    global _cache, _last_refresh
-    if _cache is None:
-        refresh()
-    elif time.time() - _last_refresh > 10:
-        t = threading.Thread(target=refresh, daemon=True)
-        t.start()
-    with _lock:
-        if _cache is None:
-            return jsonify({"error": "loading"}), 503
-        return jsonify(_cache)
+def api_analysis():
+    """REST endpoint — returns latest analysis instantly from live feed."""
+    return jsonify(build_analysis())
+
+
+@app.route("/api/stream")
+def api_stream():
+    """SSE endpoint — pushes analysis to browser in real-time.
+
+    The browser receives updates within ~300ms of Binance data changes.
+    """
+    def event_stream():
+        # Register this client
+        client_id = id(object())
+        with _sse_lock:
+            _sse_clients.add(client_id)
+        try:
+            last_hash = None
+            while True:
+                data = build_analysis()
+                # Only push if data actually changed (compare hash of key fields)
+                current_hash = hash(json.dumps({
+                    "p": data["price"],
+                    "c24": data["change24"],
+                    "p5": data["pred_5m"]["direction"],
+                    "s5": data["pred_5m"]["total_score"],
+                    "p15": data["pred_15m"]["direction"],
+                    "s15": data["pred_15m"]["total_score"],
+                }, sort_keys=True))
+                if current_hash != last_hash:
+                    last_hash = current_hash
+                    yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+                time.sleep(0.3)  # Push interval: 300ms
+        except GeneratorExit:
+            pass
+        finally:
+            with _sse_lock:
+                _sse_clients.discard(client_id)
+
+    return Response(
+        event_stream(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+            "Connection": "keep-alive",
+        },
+    )
 
 
 if __name__ == "__main__":
-    refresh()
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # Start WebSocket feed before Flask
+    print("Starting live feed...")
+    lf.start()
+    print("Live feed ready, starting Flask server...")
+    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)

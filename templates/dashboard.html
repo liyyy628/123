@@ -225,18 +225,37 @@ function updateChart(data) {
   } catch(e) { console.error('Chart error:', e); }
 }
 
-function load() {
-  fetch('/api/analysis').then(function(r){
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  }).then(function(d){
-    if (d.ok) { update(d); }
-    else { showErr(d.error||'Unknown error'); }
-  }).catch(function(e){
+var es = null;
+
+function connectSSE() {
+  if (es) { es.close(); }
+  es = new EventSource('/api/stream');
+
+  es.onmessage = function(e) {
+    try {
+      var d = JSON.parse(e.data);
+      if (d.ok) { update(d); tried = 0; }
+    } catch(err) { console.error('SSE parse error:', err); }
+  };
+
+  es.onerror = function() {
+    // SSE disconnected — will auto-reconnect. Fallback to REST if needed
     tried++;
-    if (tried < 5) { setTimeout(load, 2000); }
-    else { showErr(e.message); }
-  });
+    if (tried > 5) {
+      es.close();
+      // Fallback: poll REST every 500ms
+      setInterval(function(){
+        fetch('/api/analysis').then(function(r){ return r.json(); }).then(function(d){
+          if(d.ok) update(d);
+        }).catch(function(){});
+      }, 500);
+    }
+  };
+
+  es.onopen = function() {
+    tried = 0;
+    document.getElementById('loading').style.display = 'none';
+  };
 }
 
 function showErr(msg) {
@@ -247,21 +266,13 @@ function showErr(msg) {
 }
 
 function start() {
-  var wait = 0;
-  function check() {
-    if (typeof Chart !== 'undefined') {
-      load();
-      setInterval(load, 15000);
-    } else if (wait < 20) {
-      wait++;
-      setTimeout(check, 500);
-    } else {
-      console.warn('Chart.js not loaded, running without chart');
-      load();
-      setInterval(load, 15000);
-    }
-  }
-  check();
+  // Initial load via REST to show data immediately
+  fetch('/api/analysis').then(function(r){ return r.json(); }).then(function(d){
+    if(d.ok) update(d);
+  }).catch(function(){});
+
+  // Then switch to SSE for real-time updates
+  connectSSE();
 }
 
 document.addEventListener('DOMContentLoaded', start);
