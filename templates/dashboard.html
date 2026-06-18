@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTC/USDT Trading Analysis</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"SF Mono","Consolas","Menlo",monospace;background:#0a0e17;color:#e0e6ed;min-height:100vh}
+:root{
+  --bg:#0a0e17;--bg2:#111827;--bg3:#1a2236;--text:#e0e6ed;--text2:#8b95a5;
+  --green:#00d4aa;--red:#ff4d6a;--blue:#4da6ff;--yellow:#f0b90b;--orange:#ff9f43;
+  --border:#1f2937;--accent:#6c5ce7;
+}
+.header{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.logo{font-size:18px;font-weight:700;color:var(--yellow);letter-spacing:1px}
+.price-area{display:flex;align-items:baseline;gap:12px}
+.price-main{font-size:28px;font-weight:700}
+.price-change{font-size:14px;padding:3px 8px;border-radius:4px;font-weight:600}
+.price-change.up{background:rgba(0,212,170,0.15);color:var(--green)}
+.price-change.down{background:rgba(255,77,106,0.15);color:var(--red)}
+.stats{display:flex;gap:20px;font-size:13px;color:var(--text2)}
+.stat-item span{color:var(--text);font-weight:600}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+.status-dot.live{background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.grid{
+  display:grid;grid-template-columns:1fr 340px;
+  gap:16px;padding:16px;max-width:1600px;margin:0 auto;
+}
+@media(max-width:1200px){.grid{grid-template-columns:1fr}}
+
+.card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:16px;margin-bottom:16px;
+}
+.card-header{
+  font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;
+  color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:8px;
+}
+.card-header .icon{font-size:16px}
+
+/* Timeframe buttons */
+.tf-btns{display:flex;gap:4px}
+.tf-btns button{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;
+}
+.tf-btns button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+canvas{width:100%!important;height:320px!important}
+
+/* Signal list */
+.signal-list{display:flex;flex-direction:column;gap:8px}
+.signal-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;background:var(--bg3);border-radius:6px;font-size:13px;
+}
+.signal-dot{
+  width:10px;height:10px;border-radius:50%;flex-shrink:0;
+}
+.signal-dot.pass{background:var(--green);box-shadow:0 0 8px rgba(0,212,170,0.4)}
+.signal-dot.fail{background:var(--red);box-shadow:0 0 8px rgba(255,77,106,0.4)}
+.signal-info{flex:1;margin-left:10px}
+.signal-name{font-weight:600}
+.signal-detail{font-size:11px;color:var(--text2);margin-top:2px}
+.signal-status{font-size:11px;font-weight:700}
+.signal-status.pass{color:var(--green)}
+.signal-status.fail{color:var(--red)}
+
+/* Sentiment */
+.sentiment-gauge{
+  display:flex;align-items:center;justify-content:center;gap:6px;margin:8px 0;
+}
+.gauge-bar{
+  height:8px;flex:1;border-radius:4px;
+  background:linear-gradient(to right,var(--red),var(--orange),var(--yellow),var(--green));
+}
+.gauge-marker{
+  width:16px;height:16px;border-radius:50%;background:#fff;
+  border:3px solid var(--bg2);position:relative;
+  box-shadow:0 0 12px rgba(255,255,255,0.3);
+}
+.sent-score{font-size:32px;font-weight:700;text-align:center;margin:8px 0}
+.sent-items{font-size:12px}
+.sent-item{display:flex;justify-content:space-between;padding:3px 0;color:var(--text2)}
+.sent-item div{color:var(--text)}
+
+/* Orderbook */
+.ob-container{position:relative}
+.ob-bar{height:20px;border-radius:3px;margin:2px 0;display:flex;align-items:center;padding:0 6px;font-size:10px}
+.ob-bar.bid{background:rgba(0,212,170,0.12);color:var(--green);justify-content:flex-start}
+.ob-bar.ask{background:rgba(255,77,106,0.12);color:var(--red);justify-content:flex-end}
+
+/* Decision */
+.decision-card{
+  padding:20px;border-radius:8px;text-align:center;margin-bottom:16px;
+}
+.decision-card.trade{background:rgba(0,212,170,0.1);border:1px solid var(--green)}
+.decision-card.wait{background:rgba(240,185,11,0.1);border:1px solid var(--yellow)}
+.decision-card.block{background:rgba(255,77,106,0.1);border:1px solid var(--red)}
+.decision-title{font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px}
+.decision-result{font-size:22px;font-weight:800}
+.decision-reason{font-size:12px;margin-top:6px;color:var(--text2)}
+
+/* Risk panel */
+.risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px}
+.risk-item{background:var(--bg3);padding:8px;border-radius:4px}
+.risk-label{color:var(--text2);font-size:10px;text-transform:uppercase}
+.risk-val{font-weight:700;font-size:15px;margin-top:2px}
+.risk-val.green{color:var(--green)}.risk-val.red{color:var(--red)}.risk-val.blue{color:var(--blue)}
+
+/* Footer */
+.footer{
+  text-align:center;padding:12px;color:var(--text2);font-size:11px;
+  border-top:1px solid var(--border);
+}
+.blink{animation:blink 1s infinite}@keyframes blink{50%{opacity:0.5}}
+
+.glance-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.glance-item{text-align:center;background:var(--bg3);padding:10px 6px;border-radius:6px}
+.glance-val{font-size:18px;font-weight:700}.glance-label{font-size:10px;color:var(--text2);margin-top:2px}
+
+/* Clean scrollbar */
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">BTC/USDT</div>
+  <div class="price-area">
+    <div class="price-main" id="price">---</div>
+    <div class="price-change" id="change"></div>
+  </div>
+  <div class="stats">
+    <div class="stat-item">H: <span id="high24">---</span></div>
+    <div class="stat-item">L: <span id="low24">---</span></div>
+    <div class="stat-item">V: <span id="vol24">---</span></div>
+    <div class="stat-item"><span class="status-dot live"></span> <span id="updateTime">---</span></div>
+  </div>
+</div>
+
+<div class="grid">
+  <!-- LEFT COLUMN -->
+  <div>
+    <!-- Glance -->
+    <div class="glance-grid">
+      <div class="glance-item"><div class="glance-val" id="gTrend">--</div><div class="glance-label">4H 趋势</div></div>
+      <div class="glance-item"><div class="glance-val" id="gRSI">--</div><div class="glance-label">RSI(15)</div></div>
+      <div class="glance-item"><div class="glance-val" id="gATR">--</div><div class="glance-label">ATR(15)</div></div>
+      <div class="glance-item"><div class="glance-val" id="gSent">--</div><div class="glance-label">情绪分</div></div>
+    </div>
+
+    <!-- Chart -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <span class="icon">📈</span> K线图
+        <div class="tf-btns">
+          <button onclick="switchTF('15m')" id="btn15m" class="active">15M</button>
+          <button onclick="switchTF('1h')" id="btn1h">1H</button>
+          <button onclick="switchTF('4h')" id="btn4h">4H</button>
+        </div>
+      </div>
+      <canvas id="priceChart"></canvas>
+    </div>
+
+    <!-- Orderbook Depth -->
+    <div class="card">
+      <div class="card-header"><span class="icon">📊</span> 订单簿深度图</div>
+      <canvas id="depthChart" style="height:200px!important"></canvas>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div>
+    <!-- Decision -->
+    <div class="decision-card" id="decisionCard"></div>
+
+    <!-- Signals -->
+    <div class="card">
+      <div class="card-header"><span class="icon">🎯</span> 15分钟入场信号 <span style="font-weight:400;font-size:11px" id="sigCounter"></span></div>
+      <div class="signal-list" id="signalList"></div>
+    </div>
+
+    <!-- Sentiment -->
+    <div class="card">
+      <div class="card-header"><span class="icon">🧠</span> 情绪评分 (-5 ~ +5)</div>
+      <div class="sent-score" id="sentScore">--</div>
+      <div class="sentiment-gauge">
+        <div class="gauge-bar" style="flex:1"></div>
+      </div>
+      <div class="sent-items" id="sentItems"></div>
+    </div>
+
+    <!-- Risk -->
+    <div class="card">
+      <div class="card-header"><span class="icon">🛡️</span> 风控参数</div>
+      <div class="risk-grid" id="riskGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  BTC/USDT 量化交易分析系统 v1.0 · 数据源: OKX + Alternative.me · 稳健模式 (需≥3信号)
+</div>
+
+<script>
+let priceChart, depthChart;
+let currentData = null;
+let currentTF = '15m';
+
+async function refresh() {
+  try {
+    const resp = await fetch('/api/analysis');
+    currentData = await resp.json();
+    updateUI(currentData);
+    document.getElementById('updateTime').textContent = currentData.ts || '--';
+  } catch(e) {
+    console.error('Fetch error:', e);
+  }
+}
+
+function updateUI(d) {
+  // Price
+  document.getElementById('price').textContent = '$' + d.price.toLocaleString();
+  const chg = document.getElementById('change');
+  chg.textContent = (d.change24>=0?'+':'') + d.change24 + '%';
+  chg.className = 'price-change ' + (d.change24>=0?'up':'down');
+  document.getElementById('high24').textContent = '$' + Math.round(d.high24).toLocaleString();
+  document.getElementById('low24').textContent = '$' + Math.round(d.low24).toLocaleString();
+  document.getElementById('vol24').textContent = Math.round(d.vol24).toLocaleString() + ' BTC';
+
+  // Glance
+  const trendColors = {bullish:'#00d4aa',bearish:'#ff4d6a',sideways:'#f0b90b'};
+  document.getElementById('gTrend').textContent = d.trend_4h;
+  document.getElementById('gTrend').style.color = trendColors[d.trend_4h]||'#8b95a5';
+  document.getElementById('gRSI').textContent = d.rsi;
+  document.getElementById('gATR').textContent = d.atr;
+  document.getElementById('gSent').textContent = d.sent_score + ' (' + d.sent_label + ')';
+  document.getElementById('gSent').style.color = d.sent_score>=2?'#00d4aa':(d.sent_score<=-2?'#ff4d6a':'#8b95a5');
+
+  // Decision
+  const dc = document.getElementById('decisionCard');
+  if (d.can_trade) {
+    dc.className = 'decision-card trade';
+    dc.innerHTML = '<div class="decision-title">🔔 入场信号触发</div><div class="decision-result" style="color:var(--green)">' + (d.direction=='long'?'多头入场 LONG':'空头入场 SHORT') + '</div>';
+  } else if (d.blocks.length > 0) {
+    dc.className = 'decision-card block';
+    dc.innerHTML = '<div class="decision-title">⛔ 不入场</div><div class="decision-result" style="color:var(--red)">观望 WAIT</div><div class="decision-reason">' + d.blocks.join(' · ') + '</div>';
+  } else {
+    dc.className = 'decision-card wait';
+    dc.innerHTML = '<div class="decision-title">⏳ 等待信号</div><div class="decision-result" style="color:var(--yellow)">观望 WAIT</div>';
+  }
+
+  // Signals
+  document.getElementById('sigCounter').textContent = '(' + d.sig_count + '/' + d.sig_required + ')';
+  let sigHTML = '';
+  d.signals.forEach(s => {
+    sigHTML += '<div class="signal-row">';
+    sigHTML += '<div class="signal-dot ' + (s.passed?'pass':'fail') + '"></div>';
+    sigHTML += '<div class="signal-info"><div class="signal-name">' + s.name + '</div><div class="signal-detail">' + s.detail + '</div></div>';
+    sigHTML += '<div class="signal-status ' + (s.passed?'pass':'fail') + '">' + (s.passed?'PASS':'FAIL') + '</div>';
+    sigHTML += '</div>';
+  });
+  document.getElementById('signalList').innerHTML = sigHTML;
+
+  // Sentiment
+  document.getElementById('sentScore').textContent = d.sent_score + '分 ' + d.sent_label;
+  document.getElementById('sentScore').style.color = d.sent_score>=2?'var(--green)':(d.sent_score<=-2?'var(--red)':'var(--text)');
+  let sHTML = '';
+  d.sent_items.forEach(i => {
+    sHTML += '<div class="sent-item"><span>' + i.name + '</span><div>' + i.val + ' <span style="color:' + (i.score>0?'var(--green)':(i.score<0?'var(--red)':'var(--text2)')) + '">' + i.note + '</span></div></div>';
+  });
+  document.getElementById('sentItems').innerHTML = sHTML;
+
+  // Risk
+  document.getElementById('riskGrid').innerHTML =
+    '<div class="risk-item"><div class="risk-label">入场价</div><div class="risk-val">$' + d.entry.toLocaleString() + '</div></div>'+
+    '<div class="risk-item"><div class="risk-label">止损</div><div class="risk-val red">$' + d.stop_loss.toLocaleString() + '</div></div>'+
+    '<div class="risk-item"><div class="risk-label">止盈1</div><div class="risk-val green">$' + d.take_profit_1.toLocaleString() + '</div></div>'+
+    '<div class="risk-item"><div class="risk-label">仓位</div><div class="risk-val blue">' + d.position_pct + '%</div></div>'+
+    '<div class="risk-item"><div class="risk-label">风险</div><div class="risk-val red">' + d.risk_pct + '%</div></div>'+
+    '<div class="risk-item"><div class="risk-label">ATR</div><div class="risk-val">' + d.atr + '</div></div>'+
+    '<div class="risk-item"><div class="risk-label">订单簿</div><div class="risk-val" style="font-size:12px;color:' + (d.ob_ratio>1.2?'var(--green)':(d.ob_ratio>0&&1/d.ob_ratio>1.2?'var(--red)':'var(--text2)')) + '">' + d.ob_label + '</div></div>'+
+    '<div class="risk-item"><div class="risk-label">价差</div><div class="risk-val" style="font-size:12px">' + d.spread + '%</div></div>';
+
+  // Chart
+  updateChart(d);
+  updateDepth(d);
+}
+
+function switchTF(tf) {
+  currentTF = tf;
+  document.querySelectorAll('.tf-btns button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn'+tf).classList.add('active');
+  if(currentData) updateChart(currentData);
+}
+
+function updateChart(d) {
+  const key = 'chart_' + currentTF;
+  const candles = d[key] || [];
+  const labels = candles.map(c=>{
+    const dt = new Date(c.t);
+    if(currentTF=='15m') return dt.getHours().toString().padStart(2,'0')+':'+dt.getMinutes().toString().padStart(2,'0');
+    if(currentTF=='1h') return (dt.getMonth()+1)+'/'+dt.getDate()+' '+dt.getHours().toString().padStart(2,'0')+'h';
+    return (dt.getMonth()+1)+'/'+dt.getDate()+' '+dt.getHours().toString().padStart(2,'0')+'h';
+  });
+  const closes = candles.map(c=>c.c);
+
+  if(priceChart) priceChart.destroy();
+  const ctx = document.getElementById('priceChart').getContext('2d');
+  priceChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'BTC/USDT',
+        data: closes,
+        borderColor: '#f0b90b',
+        backgroundColor: 'rgba(240,185,11,0.08)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: true,
+        tension: 0.1,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: {intersect:false, mode:'index'},
+      plugins: {
+        legend: {display: false},
+        tooltip: {
+          callbacks: {
+            label: ctx => '$' + parseFloat(ctx.raw).toLocaleString()
+          }
+        }
+      },
+      scales: {
+        x: {display: true, ticks:{color:'#4a5568',font:{size:10},maxTicksLimit:12}, grid:{color:'rgba(31,41,55,0.5)'}},
+        y: {position:'right', ticks:{color:'#4a5568',font:{size:10},callback:v=>'$'+v.toLocaleString()}, grid:{color:'rgba(31,41,55,0.5)'}}
+      }
+    }
+  });
+
+  // Add support/resistance lines
+  const yScale = priceChart.scales.y;
+  const srPlugins = {
+    id: 'srLines',
+    afterDraw(chart) {
+      const ctx = chart.ctx;
+      const yAxis = chart.scales.y;
+      const xAxis = chart.scales.x;
+      d.supports.forEach(s => {
+        const y = yAxis.getPixelForValue(s);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0,212,170,0.3)';
+        ctx.setLineDash([4,4]);
+        ctx.beginPath();
+        ctx.moveTo(xAxis.left, y);
+        ctx.lineTo(xAxis.right, y);
+        ctx.stroke();
+        ctx.fillStyle = '#00d4aa';
+        ctx.font = '10px monospace';
+        ctx.fillText('S: '+s.toLocaleString(), xAxis.left+4, y-4);
+        ctx.restore();
+      });
+      d.resistances.forEach(r => {
+        const y = yAxis.getPixelForValue(r);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,77,106,0.3)';
+        ctx.setLineDash([4,4]);
+        ctx.beginPath();
+        ctx.moveTo(xAxis.left, y);
+        ctx.lineTo(xAxis.right, y);
+        ctx.stroke();
+        ctx.fillStyle = '#ff4d6a';
+        ctx.font = '10px monospace';
+        ctx.fillText('R: '+r.toLocaleString(), xAxis.right-80, y-4);
+        ctx.restore();
+      });
+    }
+  };
+  if(!priceChart.options.plugins.srLines) {
+    priceChart.options.plugins.srLines = srPlugins;
+  }
+  priceChart.update();
+}
+
+function updateDepth(d) {
+  const bids = d.ob_bids || [];
+  const asks = d.ob_asks || [];
+  const labels = [...bids.map(b=>b.price), ...asks.map(a=>a.price)];
+  const cumQty = [...bids.map(b=>b.cum_qty), ...asks.map(a=>a.cum_qty)];
+
+  if(depthChart) depthChart.destroy();
+  const ctx = document.getElementById('depthChart').getContext('2d');
+  depthChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {label:'买盘',data:bids.map(b=>b.cum_qty),backgroundColor:'rgba(0,212,170,0.5)',borderColor:'#00d4aa',borderWidth:1,borderRadius:2},
+        {label:'卖盘',data:[...Array(bids.length).fill(null),...asks.map(a=>a.cum_qty)].slice(bids.length),backgroundColor:'rgba(255,77,106,0.5)',borderColor:'#ff4d6a',borderWidth:1,borderRadius:2}
+      ]
+    },
+    options: {
+      responsive: true,maintainAspectRatio: false,
+      animation: false,
+      plugins: {legend:{display:false}},
+      scales: {
+        x:{display:false},
+        y:{ticks:{color:'#4a5568',font:{size:9}},grid:{color:'rgba(31,41,55,0.3)'}}
+      }
+    }
+  });
+}
+
+// Initial load
+refresh();
+// Auto refresh every 30s
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>
