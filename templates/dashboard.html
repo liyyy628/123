@@ -2,432 +2,251 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BTC/USDT Trading Analysis</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>BTC Direction Predictor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"SF Mono","Consolas","Menlo",monospace;background:#0a0e17;color:#e0e6ed;min-height:100vh}
-:root{
-  --bg:#0a0e17;--bg2:#111827;--bg3:#1a2236;--text:#e0e6ed;--text2:#8b95a5;
-  --green:#00d4aa;--red:#ff4d6a;--blue:#4da6ff;--yellow:#f0b90b;--orange:#ff9f43;
-  --border:#1f2937;--accent:#6c5ce7;
-}
+:root{--bg:#0a0e17;--bg2:#111827;--bg3:#1a2236;--green:#00d4aa;--red:#ff4d6a;--yellow:#f0b90b;--blue:#4da6ff;--border:#1f2937;--text2:#6b7280}
+
 .header{
   background:var(--bg2);border-bottom:1px solid var(--border);
-  padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
 }
-.logo{font-size:18px;font-weight:700;color:var(--yellow);letter-spacing:1px}
-.price-area{display:flex;align-items:baseline;gap:12px}
-.price-main{font-size:28px;font-weight:700}
-.price-change{font-size:14px;padding:3px 8px;border-radius:4px;font-weight:600}
-.price-change.up{background:rgba(0,212,170,0.15);color:var(--green)}
-.price-change.down{background:rgba(255,77,106,0.15);color:var(--red)}
-.stats{display:flex;gap:20px;font-size:13px;color:var(--text2)}
-.stat-item span{color:var(--text);font-weight:600}
-.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
-.status-dot.live{background:var(--green);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.logo{font-size:20px;font-weight:800;color:var(--yellow);letter-spacing:2px}
+.logo span{color:var(--text2);font-weight:400;font-size:13px;margin-left:8px}
+.price-big{font-size:28px;font-weight:700;letter-spacing:1px}
+.chg{font-size:13px;padding:2px 8px;border-radius:4px;font-weight:600}
+.chg.up{background:rgba(0,212,170,0.15);color:var(--green)}
+.chg.down{background:rgba(255,77,106,0.15);color:var(--red)}
+.stats{display:flex;gap:18px;font-size:12px;color:var(--text2)}
+.stats b{color:var(--text)}
 
-.grid{
-  display:grid;grid-template-columns:1fr 340px;
-  gap:16px;padding:16px;max-width:1600px;margin:0 auto;
+.container{max-width:1200px;margin:0 auto;padding:16px;}
+
+/* Prediction cards */
+.pred-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.pred-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:20px;text-align:center;transition:border 0.3s;
 }
-@media(max-width:1200px){.grid{grid-template-columns:1fr}}
+.pred-card:hover{border-color:var(--blue)}
+.pred-card.up{border-color:rgba(0,212,170,0.4);box-shadow:0 0 20px rgba(0,212,170,0.06)}
+.pred-card.down{border-color:rgba(255,77,106,0.4);box-shadow:0 0 20px rgba(255,77,106,0.06)}
+.pred-card.neutral{border-color:rgba(240,185,11,0.3)}
 
+.pred-header{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:8px}
+.pred-arrow{font-size:48px;line-height:1;margin:4px 0}
+.pred-arrow.up{color:var(--green)}
+.pred-arrow.down{color:var(--red)}
+.pred-arrow.neutral{color:var(--yellow)}
+.pred-label{font-size:14px;font-weight:700;margin:4px 0 12px}
+.pred-label.up{color:var(--green)}.pred-label.down{color:var(--red)}.pred-label.neutral{color:var(--yellow)}
+
+/* Confidence bar */
+.conf-bar-wrap{background:var(--bg3);border-radius:6px;height:6px;margin:8px 0;overflow:hidden}
+.conf-bar{height:100%;border-radius:6px;transition:width 0.5s}
+.conf-bar.up{background:linear-gradient(90deg,var(--green),#00ffcc)}
+.conf-bar.down{background:linear-gradient(90deg,var(--red),#ff8099)}
+.conf-bar.neutral{background:linear-gradient(90deg,var(--yellow),#ffe066)}
+.conf-text{font-size:22px;font-weight:800}
+
+/* Candle info */
+.candle-info{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px;font-size:12px}
+.candle-info div{background:var(--bg3);padding:6px;border-radius:4px;text-align:center}
+.ci-label{color:var(--text2);font-size:10px}.ci-val{font-weight:700;font-size:15px}
+
+/* Progress bar */
+.progress{border-radius:4px;height:4px;margin-top:8px;background:var(--bg3);overflow:hidden}
+.progress-fill{height:100%;background:var(--blue);border-radius:4px;transition:width 1s linear}
+.progress-text{font-size:10px;color:var(--text2);margin-top:2px;text-align:right}
+
+/* Factors */
+.factor-list{margin-top:10px;text-align:left}
+.factor-row{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;font-size:11px;border-radius:3px;margin:2px 0}
+.factor-row.pos{background:rgba(0,212,170,0.05)}.factor-row.neg{background:rgba(255,77,106,0.05)}
+.factor-score{font-weight:700;font-size:13px}.factor-score.pos{color:var(--green)}.factor-score.neg{color:var(--red)}
+
+/* Bottom row */
+.bottom-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
 .card{
-  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
-  padding:16px;margin-bottom:16px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;
 }
-.card-header{
-  font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;
-  color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:8px;
-}
-.card-header .icon{font-size:16px}
+.card-title{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:10px}
+canvas{width:100%!important;height:280px!important}
 
-/* Timeframe buttons */
-.tf-btns{display:flex;gap:4px}
-.tf-btns button{
-  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
-  padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-family:inherit;
-}
-.tf-btns button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* Summary row */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.summary-item{text-align:center;background:var(--bg3);padding:10px 6px;border-radius:6px}
+.summary-val{font-size:18px;font-weight:700}.summary-label{font-size:10px;color:var(--text2);margin-top:2px}
 
-canvas{width:100%!important;height:320px!important}
-
-/* Signal list */
-.signal-list{display:flex;flex-direction:column;gap:8px}
-.signal-row{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:8px 12px;background:var(--bg3);border-radius:6px;font-size:13px;
-}
-.signal-dot{
-  width:10px;height:10px;border-radius:50%;flex-shrink:0;
-}
-.signal-dot.pass{background:var(--green);box-shadow:0 0 8px rgba(0,212,170,0.4)}
-.signal-dot.fail{background:var(--red);box-shadow:0 0 8px rgba(255,77,106,0.4)}
-.signal-info{flex:1;margin-left:10px}
-.signal-name{font-weight:600}
-.signal-detail{font-size:11px;color:var(--text2);margin-top:2px}
-.signal-status{font-size:11px;font-weight:700}
-.signal-status.pass{color:var(--green)}
-.signal-status.fail{color:var(--red)}
-
-/* Sentiment */
-.sentiment-gauge{
-  display:flex;align-items:center;justify-content:center;gap:6px;margin:8px 0;
-}
-.gauge-bar{
-  height:8px;flex:1;border-radius:4px;
-  background:linear-gradient(to right,var(--red),var(--orange),var(--yellow),var(--green));
-}
-.gauge-marker{
-  width:16px;height:16px;border-radius:50%;background:#fff;
-  border:3px solid var(--bg2);position:relative;
-  box-shadow:0 0 12px rgba(255,255,255,0.3);
-}
-.sent-score{font-size:32px;font-weight:700;text-align:center;margin:8px 0}
-.sent-items{font-size:12px}
-.sent-item{display:flex;justify-content:space-between;padding:3px 0;color:var(--text2)}
-.sent-item div{color:var(--text)}
-
-/* Orderbook */
-.ob-container{position:relative}
-.ob-bar{height:20px;border-radius:3px;margin:2px 0;display:flex;align-items:center;padding:0 6px;font-size:10px}
-.ob-bar.bid{background:rgba(0,212,170,0.12);color:var(--green);justify-content:flex-start}
-.ob-bar.ask{background:rgba(255,77,106,0.12);color:var(--red);justify-content:flex-end}
-
-/* Decision */
-.decision-card{
-  padding:20px;border-radius:8px;text-align:center;margin-bottom:16px;
-}
-.decision-card.trade{background:rgba(0,212,170,0.1);border:1px solid var(--green)}
-.decision-card.wait{background:rgba(240,185,11,0.1);border:1px solid var(--yellow)}
-.decision-card.block{background:rgba(255,77,106,0.1);border:1px solid var(--red)}
-.decision-title{font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px}
-.decision-result{font-size:22px;font-weight:800}
-.decision-reason{font-size:12px;margin-top:6px;color:var(--text2)}
-
-/* Risk panel */
-.risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px}
-.risk-item{background:var(--bg3);padding:8px;border-radius:4px}
-.risk-label{color:var(--text2);font-size:10px;text-transform:uppercase}
-.risk-val{font-weight:700;font-size:15px;margin-top:2px}
-.risk-val.green{color:var(--green)}.risk-val.red{color:var(--red)}.risk-val.blue{color:var(--blue)}
-
-/* Footer */
-.footer{
-  text-align:center;padding:12px;color:var(--text2);font-size:11px;
-  border-top:1px solid var(--border);
-}
-.blink{animation:blink 1s infinite}@keyframes blink{50%{opacity:0.5}}
-
-.glance-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.glance-item{text-align:center;background:var(--bg3);padding:10px 6px;border-radius:6px}
-.glance-val{font-size:18px;font-weight:700}.glance-label{font-size:10px;color:var(--text2);margin-top:2px}
-
-/* Clean scrollbar */
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.footer{text-align:center;padding:10px;color:var(--text2);font-size:10px;border-top:1px solid var(--border);margin-top:16px}
+.live-dot{width:6px;height:6px;display:inline-block;background:var(--green);border-radius:50%;animation:pulse 2s infinite;margin-right:4px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.flash{animation:flash 0.5s}
+@keyframes flash{0%{opacity:0.5}100%{opacity:1}}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="logo">BTC/USDT</div>
-  <div class="price-area">
-    <div class="price-main" id="price">---</div>
-    <div class="price-change" id="change"></div>
+  <div class="logo">BTC<span>方向预测</span></div>
+  <div>
+    <div class="price-big" id="price">---</div>
+    <div class="chg" id="change24"></div>
   </div>
   <div class="stats">
-    <div class="stat-item">H: <span id="high24">---</span></div>
-    <div class="stat-item">L: <span id="low24">---</span></div>
-    <div class="stat-item">V: <span id="vol24">---</span></div>
-    <div class="stat-item"><span class="status-dot live"></span> <span id="updateTime">---</span></div>
+    <div>24H高 <b id="h24">---</b></div>
+    <div>24H低 <b id="l24">---</b></div>
+    <div>量 <b id="v24">---</b></div>
+    <div><span class="live-dot"></span><b id="ts">---</b></div>
   </div>
 </div>
 
-<div class="grid">
-  <!-- LEFT COLUMN -->
-  <div>
-    <!-- Glance -->
-    <div class="glance-grid">
-      <div class="glance-item"><div class="glance-val" id="gTrend">--</div><div class="glance-label">4H 趋势</div></div>
-      <div class="glance-item"><div class="glance-val" id="gRSI">--</div><div class="glance-label">RSI(15)</div></div>
-      <div class="glance-item"><div class="glance-val" id="gATR">--</div><div class="glance-label">ATR(15)</div></div>
-      <div class="glance-item"><div class="glance-val" id="gSent">--</div><div class="glance-label">情绪分</div></div>
+<div class="container">
+  <!-- Prediction Cards -->
+  <div class="pred-grid">
+    <div class="pred-card" id="card5">
+      <div class="pred-header">5分钟方向预测</div>
+      <div class="pred-arrow" id="arrow5">--</div>
+      <div class="pred-label" id="label5">--</div>
+      <div class="conf-text" id="conf5">--</div>
+      <div class="conf-bar-wrap"><div class="conf-bar" id="bar5" style="width:0%"></div></div>
+      <div class="progress"><div class="progress-fill" id="prog5" style="width:0%"></div></div>
+      <div class="progress-text" id="progText5">--</div>
+      <div class="candle-info" id="candle5"></div>
+      <div class="factor-list" id="factors5"></div>
     </div>
 
-    <!-- Chart -->
-    <div class="card" style="margin-top:16px">
-      <div class="card-header">
-        <span class="icon">📈</span> K线图
-        <div class="tf-btns">
-          <button onclick="switchTF('15m')" id="btn15m" class="active">15M</button>
-          <button onclick="switchTF('1h')" id="btn1h">1H</button>
-          <button onclick="switchTF('4h')" id="btn4h">4H</button>
-        </div>
-      </div>
-      <canvas id="priceChart"></canvas>
-    </div>
-
-    <!-- Orderbook Depth -->
-    <div class="card">
-      <div class="card-header"><span class="icon">📊</span> 订单簿深度图</div>
-      <canvas id="depthChart" style="height:200px!important"></canvas>
+    <div class="pred-card" id="card15">
+      <div class="pred-header">15分钟方向预测</div>
+      <div class="pred-arrow" id="arrow15">--</div>
+      <div class="pred-label" id="label15">--</div>
+      <div class="conf-text" id="conf15">--</div>
+      <div class="conf-bar-wrap"><div class="conf-bar" id="bar15" style="width:0%"></div></div>
+      <div class="progress"><div class="progress-fill" id="prog15" style="width:0%"></div></div>
+      <div class="progress-text" id="progText15">--</div>
+      <div class="candle-info" id="candle15"></div>
+      <div class="factor-list" id="factors15"></div>
     </div>
   </div>
 
-  <!-- RIGHT COLUMN -->
-  <div>
-    <!-- Decision -->
-    <div class="decision-card" id="decisionCard"></div>
-
-    <!-- Signals -->
+  <!-- Bottom: Chart + Summary -->
+  <div class="bottom-grid">
     <div class="card">
-      <div class="card-header"><span class="icon">🎯</span> 15分钟入场信号 <span style="font-weight:400;font-size:11px" id="sigCounter"></span></div>
-      <div class="signal-list" id="signalList"></div>
+      <div class="card-title">15分钟走势图</div>
+      <canvas id="chart"></canvas>
     </div>
-
-    <!-- Sentiment -->
     <div class="card">
-      <div class="card-header"><span class="icon">🧠</span> 情绪评分 (-5 ~ +5)</div>
-      <div class="sent-score" id="sentScore">--</div>
-      <div class="sentiment-gauge">
-        <div class="gauge-bar" style="flex:1"></div>
-      </div>
-      <div class="sent-items" id="sentItems"></div>
-    </div>
-
-    <!-- Risk -->
-    <div class="card">
-      <div class="card-header"><span class="icon">🛡️</span> 风控参数</div>
-      <div class="risk-grid" id="riskGrid"></div>
+      <div class="card-title">盘口概览</div>
+      <div class="summary" id="summary"></div>
     </div>
   </div>
 </div>
 
 <div class="footer">
-  BTC/USDT 量化交易分析系统 v1.0 · 数据源: OKX + Alternative.me · 稳健模式 (需≥3信号)
+  BTC/USDT 方向预测系统 · 5因子评分模型 · <span id="refreshHint">每15秒刷新</span>
 </div>
 
 <script>
-let priceChart, depthChart;
-let currentData = null;
-let currentTF = '15m';
+let chart;
+function icon(dir){ return dir=='up'?'\u2191':(dir=='down'?'\u2193':'\u2194'); }
+function label(dir){ return dir=='up'?'看涨':(dir=='down'?'看跌':'震荡'); }
 
-async function refresh() {
-  try {
-    const resp = await fetch('/api/analysis');
-    currentData = await resp.json();
-    updateUI(currentData);
-    document.getElementById('updateTime').textContent = currentData.ts || '--';
-  } catch(e) {
-    console.error('Fetch error:', e);
-  }
-}
-
-function updateUI(d) {
-  // Price
+function update(d) {
+  // Header
   document.getElementById('price').textContent = '$' + d.price.toLocaleString();
-  const chg = document.getElementById('change');
-  chg.textContent = (d.change24>=0?'+':'') + d.change24 + '%';
-  chg.className = 'price-change ' + (d.change24>=0?'up':'down');
-  document.getElementById('high24').textContent = '$' + Math.round(d.high24).toLocaleString();
-  document.getElementById('low24').textContent = '$' + Math.round(d.low24).toLocaleString();
-  document.getElementById('vol24').textContent = Math.round(d.vol24).toLocaleString() + ' BTC';
+  const c = document.getElementById('change24');
+  c.textContent = (d.change24>=0?'+':'') + d.change24 + '%';
+  c.className = 'chg ' + (d.change24>=0?'up':'down');
+  document.getElementById('h24').textContent = '$' + Math.round(d.high24).toLocaleString();
+  document.getElementById('l24').textContent = '$' + Math.round(d.low24).toLocaleString();
+  document.getElementById('v24').textContent = Math.round(d.vol24).toLocaleString() + ' BTC';
+  document.getElementById('ts').textContent = d.ts || '---';
 
-  // Glance
-  const trendColors = {bullish:'#00d4aa',bearish:'#ff4d6a',sideways:'#f0b90b'};
-  document.getElementById('gTrend').textContent = d.trend_4h;
-  document.getElementById('gTrend').style.color = trendColors[d.trend_4h]||'#8b95a5';
-  document.getElementById('gRSI').textContent = d.rsi;
-  document.getElementById('gATR').textContent = d.atr;
-  document.getElementById('gSent').textContent = d.sent_score + ' (' + d.sent_label + ')';
-  document.getElementById('gSent').style.color = d.sent_score>=2?'#00d4aa':(d.sent_score<=-2?'#ff4d6a':'#8b95a5');
+  // Predictions
+  [['5m', d.pred_5m], ['15m', d.pred_15m]].forEach(([tf, p]) => {
+    if (!p) return;
+    const dir = p.direction;
+    document.getElementById('card'+tf).className = 'pred-card ' + dir;
+    document.getElementById('arrow'+tf).textContent = icon(dir);
+    document.getElementById('arrow'+tf).className = 'pred-arrow ' + dir;
+    document.getElementById('label'+tf).textContent = label(dir);
+    document.getElementById('label'+tf).className = 'pred-label ' + dir;
+    document.getElementById('conf'+tf).textContent = p.confidence + '% 置信度';
+    document.getElementById('bar'+tf).style.width = p.confidence + '%';
+    document.getElementById('bar'+tf).className = 'conf-bar ' + dir;
+    document.getElementById('prog'+tf).style.width = p.candle_pct + '%';
+    document.getElementById('progText'+tf).textContent = 'K线进度 ' + p.candle_pct + '%';
 
-  // Decision
-  const dc = document.getElementById('decisionCard');
-  if (d.can_trade) {
-    dc.className = 'decision-card trade';
-    dc.innerHTML = '<div class="decision-title">🔔 入场信号触发</div><div class="decision-result" style="color:var(--green)">' + (d.direction=='long'?'多头入场 LONG':'空头入场 SHORT') + '</div>';
-  } else if (d.blocks.length > 0) {
-    dc.className = 'decision-card block';
-    dc.innerHTML = '<div class="decision-title">⛔ 不入场</div><div class="decision-result" style="color:var(--red)">观望 WAIT</div><div class="decision-reason">' + d.blocks.join(' · ') + '</div>';
-  } else {
-    dc.className = 'decision-card wait';
-    dc.innerHTML = '<div class="decision-title">⏳ 等待信号</div><div class="decision-result" style="color:var(--yellow)">观望 WAIT</div>';
-  }
+    // Candle info
+    document.getElementById('candle'+tf).innerHTML =
+      '<div><div class="ci-label">开盘</div><div class="ci-val">$' + p.open_price.toLocaleString() + '</div></div>'+
+      '<div><div class="ci-label">当前</div><div class="ci-val" style="color:'+(p.change_pct>=0?'var(--green)':'var(--red)')+'">$' + p.price.toLocaleString() + '</div></div>'+
+      '<div><div class="ci-label">涨跌幅</div><div class="ci-val" style="color:'+(p.change_pct>=0?'var(--green)':'var(--red)')+'">'+(p.change_pct>=0?'+':'')+p.change_pct.toFixed(4)+'%</div></div>'+
+      '<div><div class="ci-label">K线状态</div><div class="ci-val" style="color:'+(p.change_pct>=0?'var(--green)':'var(--red)')+'">'+p.candle_status+'</div></div>';
 
-  // Signals
-  document.getElementById('sigCounter').textContent = '(' + d.sig_count + '/' + d.sig_required + ')';
-  let sigHTML = '';
-  d.signals.forEach(s => {
-    sigHTML += '<div class="signal-row">';
-    sigHTML += '<div class="signal-dot ' + (s.passed?'pass':'fail') + '"></div>';
-    sigHTML += '<div class="signal-info"><div class="signal-name">' + s.name + '</div><div class="signal-detail">' + s.detail + '</div></div>';
-    sigHTML += '<div class="signal-status ' + (s.passed?'pass':'fail') + '">' + (s.passed?'PASS':'FAIL') + '</div>';
-    sigHTML += '</div>';
+    // Factors
+    let fHTML = '';
+    p.factors.forEach(f => {
+      const cls = f.score > 0 ? 'pos' : (f.score < 0 ? 'neg' : '');
+      fHTML += '<div class="factor-row ' + cls + '"><span>' + f.name + ' <span style="color:var(--text2);font-size:10px">' + f.detail + '</span></span><span class="factor-score ' + cls + '">' + (f.score>0?'+':'') + f.score + '</span></div>';
+    });
+    document.getElementById('factors'+tf).innerHTML = fHTML;
   });
-  document.getElementById('signalList').innerHTML = sigHTML;
-
-  // Sentiment
-  document.getElementById('sentScore').textContent = d.sent_score + '分 ' + d.sent_label;
-  document.getElementById('sentScore').style.color = d.sent_score>=2?'var(--green)':(d.sent_score<=-2?'var(--red)':'var(--text)');
-  let sHTML = '';
-  d.sent_items.forEach(i => {
-    sHTML += '<div class="sent-item"><span>' + i.name + '</span><div>' + i.val + ' <span style="color:' + (i.score>0?'var(--green)':(i.score<0?'var(--red)':'var(--text2)')) + '">' + i.note + '</span></div></div>';
-  });
-  document.getElementById('sentItems').innerHTML = sHTML;
-
-  // Risk
-  document.getElementById('riskGrid').innerHTML =
-    '<div class="risk-item"><div class="risk-label">入场价</div><div class="risk-val">$' + d.entry.toLocaleString() + '</div></div>'+
-    '<div class="risk-item"><div class="risk-label">止损</div><div class="risk-val red">$' + d.stop_loss.toLocaleString() + '</div></div>'+
-    '<div class="risk-item"><div class="risk-label">止盈1</div><div class="risk-val green">$' + d.take_profit_1.toLocaleString() + '</div></div>'+
-    '<div class="risk-item"><div class="risk-label">仓位</div><div class="risk-val blue">' + d.position_pct + '%</div></div>'+
-    '<div class="risk-item"><div class="risk-label">风险</div><div class="risk-val red">' + d.risk_pct + '%</div></div>'+
-    '<div class="risk-item"><div class="risk-label">ATR</div><div class="risk-val">' + d.atr + '</div></div>'+
-    '<div class="risk-item"><div class="risk-label">订单簿</div><div class="risk-val" style="font-size:12px;color:' + (d.ob_ratio>1.2?'var(--green)':(d.ob_ratio>0&&1/d.ob_ratio>1.2?'var(--red)':'var(--text2)')) + '">' + d.ob_label + '</div></div>'+
-    '<div class="risk-item"><div class="risk-label">价差</div><div class="risk-val" style="font-size:12px">' + d.spread + '%</div></div>';
 
   // Chart
-  updateChart(d);
-  updateDepth(d);
+  updateChart(d.chart || []);
+
+  // Summary
+  document.getElementById('summary').innerHTML =
+    '<div class="summary-item"><div class="summary-val" id="s5dir">'+icon(d.pred_5m.direction)+' '+label(d.pred_5m.direction)+'</div><div class="summary-label">5M预测</div></div>'+
+    '<div class="summary-item"><div class="summary-val" id="s15dir">'+icon(d.pred_15m.direction)+' '+label(d.pred_15m.direction)+'</div><div class="summary-label">15M预测</div></div>'+
+    '<div class="summary-item"><div class="summary-val">$'+Math.round(d.high24).toLocaleString()+'</div><div class="summary-label">24H高</div></div>'+
+    '<div class="summary-item"><div class="summary-val">$'+Math.round(d.low24).toLocaleString()+'</div><div class="summary-label">24H低</div></div>';
 }
 
-function switchTF(tf) {
-  currentTF = tf;
-  document.querySelectorAll('.tf-btns button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('btn'+tf).classList.add('active');
-  if(currentData) updateChart(currentData);
-}
+function updateChart(data) {
+  const labels = data.map(c => new Date(c.t).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}));
+  const closes = data.map(c => c.c);
+  const opens = data.map(c => c.o);
 
-function updateChart(d) {
-  const key = 'chart_' + currentTF;
-  const candles = d[key] || [];
-  const labels = candles.map(c=>{
-    const dt = new Date(c.t);
-    if(currentTF=='15m') return dt.getHours().toString().padStart(2,'0')+':'+dt.getMinutes().toString().padStart(2,'0');
-    if(currentTF=='1h') return (dt.getMonth()+1)+'/'+dt.getDate()+' '+dt.getHours().toString().padStart(2,'0')+'h';
-    return (dt.getMonth()+1)+'/'+dt.getDate()+' '+dt.getHours().toString().padStart(2,'0')+'h';
-  });
-  const closes = candles.map(c=>c.c);
-
-  if(priceChart) priceChart.destroy();
-  const ctx = document.getElementById('priceChart').getContext('2d');
-  priceChart = new Chart(ctx, {
+  if (chart) chart.destroy();
+  const ctx = document.getElementById('chart').getContext('2d');
+  chart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: labels,
+      labels,
       datasets: [{
-        label: 'BTC/USDT',
+        label: 'BTC',
         data: closes,
         borderColor: '#f0b90b',
-        backgroundColor: 'rgba(240,185,11,0.08)',
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: true,
-        tension: 0.1,
+        backgroundColor: 'rgba(240,185,11,0.06)',
+        borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.1,
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       animation: false,
-      interaction: {intersect:false, mode:'index'},
-      plugins: {
-        legend: {display: false},
-        tooltip: {
-          callbacks: {
-            label: ctx => '$' + parseFloat(ctx.raw).toLocaleString()
-          }
-        }
-      },
+      plugins: { legend: { display: false } },
       scales: {
-        x: {display: true, ticks:{color:'#4a5568',font:{size:10},maxTicksLimit:12}, grid:{color:'rgba(31,41,55,0.5)'}},
-        y: {position:'right', ticks:{color:'#4a5568',font:{size:10},callback:v=>'$'+v.toLocaleString()}, grid:{color:'rgba(31,41,55,0.5)'}}
-      }
-    }
-  });
-
-  // Add support/resistance lines
-  const yScale = priceChart.scales.y;
-  const srPlugins = {
-    id: 'srLines',
-    afterDraw(chart) {
-      const ctx = chart.ctx;
-      const yAxis = chart.scales.y;
-      const xAxis = chart.scales.x;
-      d.supports.forEach(s => {
-        const y = yAxis.getPixelForValue(s);
-        ctx.save();
-        ctx.strokeStyle = 'rgba(0,212,170,0.3)';
-        ctx.setLineDash([4,4]);
-        ctx.beginPath();
-        ctx.moveTo(xAxis.left, y);
-        ctx.lineTo(xAxis.right, y);
-        ctx.stroke();
-        ctx.fillStyle = '#00d4aa';
-        ctx.font = '10px monospace';
-        ctx.fillText('S: '+s.toLocaleString(), xAxis.left+4, y-4);
-        ctx.restore();
-      });
-      d.resistances.forEach(r => {
-        const y = yAxis.getPixelForValue(r);
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255,77,106,0.3)';
-        ctx.setLineDash([4,4]);
-        ctx.beginPath();
-        ctx.moveTo(xAxis.left, y);
-        ctx.lineTo(xAxis.right, y);
-        ctx.stroke();
-        ctx.fillStyle = '#ff4d6a';
-        ctx.font = '10px monospace';
-        ctx.fillText('R: '+r.toLocaleString(), xAxis.right-80, y-4);
-        ctx.restore();
-      });
-    }
-  };
-  if(!priceChart.options.plugins.srLines) {
-    priceChart.options.plugins.srLines = srPlugins;
-  }
-  priceChart.update();
-}
-
-function updateDepth(d) {
-  const bids = d.ob_bids || [];
-  const asks = d.ob_asks || [];
-  const labels = [...bids.map(b=>b.price), ...asks.map(a=>a.price)];
-  const cumQty = [...bids.map(b=>b.cum_qty), ...asks.map(a=>a.cum_qty)];
-
-  if(depthChart) depthChart.destroy();
-  const ctx = document.getElementById('depthChart').getContext('2d');
-  depthChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {label:'买盘',data:bids.map(b=>b.cum_qty),backgroundColor:'rgba(0,212,170,0.5)',borderColor:'#00d4aa',borderWidth:1,borderRadius:2},
-        {label:'卖盘',data:[...Array(bids.length).fill(null),...asks.map(a=>a.cum_qty)].slice(bids.length),backgroundColor:'rgba(255,77,106,0.5)',borderColor:'#ff4d6a',borderWidth:1,borderRadius:2}
-      ]
-    },
-    options: {
-      responsive: true,maintainAspectRatio: false,
-      animation: false,
-      plugins: {legend:{display:false}},
-      scales: {
-        x:{display:false},
-        y:{ticks:{color:'#4a5568',font:{size:9}},grid:{color:'rgba(31,41,55,0.3)'}}
+        x: { ticks: { color: '#4a5568', font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: 'rgba(31,41,55,0.3)' } },
+        y: { position: 'right', ticks: { color: '#4a5568', font: { size: 9 }, callback: v => '$' + v.toLocaleString() }, grid: { color: 'rgba(31,41,55,0.3)' } }
       }
     }
   });
 }
 
-// Initial load
-refresh();
-// Auto refresh every 30s
-setInterval(refresh, 30000);
+async function load() {
+  try {
+    const r = await fetch('/api/analysis');
+    if (r.ok) { const d = await r.json(); if (d.ok) update(d); }
+  } catch(e) { console.error(e); }
+}
+
+load();
+setInterval(load, 15000);
 </script>
 </body>
 </html>
