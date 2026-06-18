@@ -51,3 +51,17 @@ LOW_VOLUME_DEGRADE = True
 MIN_15M_VOLUME_BTC = 50
 REVIEW_LOG_PATH = "logs/trade_review.csv"
 SELF_EVOLVE_LOG = "logs/self_evolve.json"
+
+# ===== 链上数据 (onchain.py) =====
+BLOCKCHAIN_CHARTS_TIMESPAN = "7d"
+WHALE_ALERT_API_KEY = ""  # https://whale-alert.io/
+WHALE_MIN_VALUE_USD = 10000000  # $10M minimum for whale alert
+
+# ===== 预测市场 (prediction_market.py) =====
+PREDICTION_MARKET_ENABLED = False  # Set True after configuring API keys
+
+# ===== 回测系统 (backtest.py) =====
+BACKTEST_INITIAL_BALANCE = 10000.0
+BACKTEST_COMMISSION = 0.001       # 0.1% per trade
+BACKTEST_SLIPPAGE = 0.0005        # 0.05%
+BACKTEST_COOLDOWN_CANDLES = 8     # Min candles between trades

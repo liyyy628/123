@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 logs/
 .DS_Store
+*.pyc
+static/analysis.json
+.env
+.venv/
+*.egg-info/

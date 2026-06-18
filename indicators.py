@@ -152,21 +152,21 @@ def analyze_volume(klines: List[Dict]) -> Dict:
 def determine_trend(klines: List[Dict], ema_periods: List[int]) -> Dict:
     closes = [k["close"] for k in klines]
     if len(closes) < max(ema_periods):
-        return {"trend": "sideways", "description": "\u6570\u636e\u4e0d\u8db3"}
+        return {"trend": "sideways", "description": "数据不足"}
     ema_vals = {}
     for p in ema_periods:
         v = ema_value(closes, p)
         if v is not None:
             ema_vals[p] = v
     if len(ema_vals) < 3:
-        return {"trend": "sideways", "description": "EMA\u6570\u636e\u4e0d\u8db3"}
+        return {"trend": "sideways", "description": "EMA数据不足"}
     sorted_periods = sorted(ema_vals.keys())
     sorted_vals = [ema_vals[p] for p in sorted_periods]
     if all(sorted_vals[i] > sorted_vals[i + 1] for i in range(len(sorted_vals) - 1)):
-        return {"trend": "bullish", "description": f"EMA\u591a\u5934\u6392\u5217: {', '.join(f'{p}={v:.0f}' for p, v in zip(sorted_periods, sorted_vals))}"}
+        return {"trend": "bullish", "description": f"EMA多头排列: {', '.join(f'{p}={v:.0f}' for p, v in zip(sorted_periods, sorted_vals))}"}
     if all(sorted_vals[i] < sorted_vals[i + 1] for i in range(len(sorted_vals) - 1)):
-        return {"trend": "bearish", "description": f"EMA\u7a7a\u5934\u6392\u5217: {', '.join(f'{p}={v:.0f}' for p, v in zip(sorted_periods, sorted_vals))}"}
-    return {"trend": "sideways", "description": f"EMA\u7f20\u7ed5/\u4ea4\u53c9: {', '.join(f'{p}={v:.0f}' for p, v in zip(sorted_periods, sorted_vals))}"}
+        return {"trend": "bearish", "description": f"EMA空头排列: {', '.join(f'{p}={v:.0f}' for p, v in zip(sorted_periods, sorted_vals))}"}
+    return {"trend": "sideways", "description": f"EMA缠绕/交叉: {', '.join(f'{p}={v:.0f}' for p, v in zip(sorted_periods, sorted_vals))}"}
 
 
 def find_support_resistance(klines: List[Dict], lookback: int = 50) -> Dict:

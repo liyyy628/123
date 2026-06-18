@@ -7,6 +7,7 @@ import data as d
 import indicators as ind
 from sentiment import score_sentiment, check_high_impact_events, check_news_volatility, check_onchain
 from orderbook import analyze_order_book, analyze_taker_volumes, RiskManager
+from prediction_market import get_prediction_market_signal
 from config import MODE_CONFIGS, DEFAULT_MODE, EMA_4H, EMA_1H, WEEKEND_DEGRADE, LOW_VOLUME_DEGRADE, MIN_15M_VOLUME_BTC, Mode, RSI_OVERSOLD, RSI_OVERBOUGHT
 
 logger = logging.getLogger(__name__)
@@ -22,16 +23,16 @@ class BTCAnalyzer:
         self.results: Dict = {}
 
     def fetch_all_data(self) -> None:
-        logger.info("\U0001f310 \u6b63\u5728\u83b7\u53d6\u5e02\u573a\u6570\u636e...")
+        logger.info("🌐 正在获取市场数据...")
         self.raw_data = d.fetch_multi_tf_klines()
         for tf in ["4h", "1h", "15m"]:
             if tf in self.raw_data:
                 self.parsed[tf] = d.parse_klines_to_dicts(self.raw_data[tf])
         self.current_price = self.parsed["15m"][-1]["close"] if self.parsed.get("15m") else 0
-        logger.info(f"\u2705 \u6570\u636e\u83b7\u53d6\u5b8c\u6210\uff0c\u5f53\u524dBTC\u4ef7\u683c: {self.current_price:.2f}")
+        logger.info(f"✅ 数据获取完成，当前BTC价格: {self.current_price:.2f}")
 
     def analyze_technical(self) -> Dict:
-        logger.info("\U0001f4ca \u6280\u672f\u9762\u5206\u6790\u4e2d...")
+        logger.info("📊 技术面分析中...")
         result = {"4h": {}, "1h": {}, "15m": {}, "support_resistance": {}, "overall_trend": "", "preferred_direction": "wait"}
         if "4h" in self.parsed and self.parsed["4h"]:
             trend_4h = ind.determine_trend(self.parsed["4h"], EMA_4H)
@@ -52,37 +53,37 @@ class BTCAnalyzer:
             vol = ind.analyze_volume(k15)
             result["15m"] = {"current_price": self.current_price, "rsi": rsi_val, "atr": atr_val, "volume": vol}
         if result["4h"].get("trend") == "bullish" and result["1h"].get("trend") != "bearish":
-            result["overall_trend"] = "\u591a\u5934 \U0001f4c8"
+            result["overall_trend"] = "多头 📈"
             result["preferred_direction"] = "long"
         elif result["4h"].get("trend") == "bearish" and result["1h"].get("trend") != "bullish":
-            result["overall_trend"] = "\u7a7a\u5934 \U0001f4c9"
+            result["overall_trend"] = "空头 📉"
             result["preferred_direction"] = "short"
         else:
-            result["overall_trend"] = "\u9707\u8361 \u2696\ufe0f"
+            result["overall_trend"] = "震荡 ⚖️"
             result["preferred_direction"] = "wait"
         return result
 
     def analyze_15m_signals(self) -> Dict:
-        logger.info("\U0001f50d \u68c0\u6d4b15\u5206\u949f\u5165\u573a\u4fe1\u53f7...")
+        logger.info("🔍 检测15分钟入场信号...")
         result = {"signals_found": 0, "total_checked": 0, "signals": [], "has_entry": False}
         k15 = self.parsed.get("15m", [])
         if len(k15) < 30:
-            result["error"] = "15\u5206\u949f\u6570\u636e\u4e0d\u8db3"
+            result["error"] = "15分钟数据不足"
             return result
         closes = [k["close"] for k in k15]
         highs = [k["high"] for k in k15]
         lows = [k["low"] for k in k15]
         last = k15[-1]
         prev = k15[-2]
-        # a) K\u7ebf\u5f62\u6001
+        # a) K线形态
         pattern = ind.detect_candlestick_pattern(last)
         engulfing = ind.detect_engulfing(prev, last)
         if pattern or engulfing:
             detail = f"{pattern or engulfing} @ {last['close']:.1f}"
-            result["signals"].append({"name": "K\u7ebf\u5f62\u6001", "found": True, "detail": detail})
+            result["signals"].append({"name": "K线形态", "found": True, "detail": detail})
             result["signals_found"] += 1
         else:
-            result["signals"].append({"name": "K\u7ebf\u5f62\u6001", "found": False, "detail": "\u65e0\u663e\u8457\u53cd\u8f6c\u5f62\u6001"})
+            result["signals"].append({"name": "K线形态", "found": False, "detail": "无显著反转形态"})
         result["total_checked"] += 1
         # b) MACD
         macd_line, sig_line, hist = ind.macd(closes)
@@ -98,16 +99,16 @@ class BTCAnalyzer:
         macd_detail = ""
         if m_prev < s_prev and m_curr > s_curr:
             macd_signal = True
-            macd_detail = "MACD\u91d1\u53c9 \u2713"
+            macd_detail = "MACD金叉 ✓"
         elif m_prev > s_prev and m_curr < s_curr:
             macd_signal = True
-            macd_detail = "MACD\u6b7b\u53c9 \u2713"
+            macd_detail = "MACD死叉 ✓"
         elif h_curr > 0 and h_prev < 0:
             macd_signal = True
-            macd_detail = "MACD\u67f1\u72b6\u7ebf\u7ffb\u6b63 \u2713"
+            macd_detail = "MACD柱状线翻正 ✓"
         elif h_curr < 0 and h_prev > 0:
             macd_signal = True
-            macd_detail = "MACD\u67f1\u72b6\u7ebf\u7ffb\u8d1f \u2713"
+            macd_detail = "MACD柱状线翻负 ✓"
         if macd_signal:
             result["signals"].append({"name": "MACD", "found": True, "detail": macd_detail})
             result["signals_found"] += 1
@@ -121,42 +122,42 @@ class BTCAnalyzer:
         if rsi_val is not None:
             if rsi_val < RSI_OVERSOLD:
                 rsi_signal = True
-                rsi_detail += " \u8d85\u5356\u533a\u62d0\u5934 \u2713"
+                rsi_detail += " 超卖区拐头 ✓"
             elif rsi_val > RSI_OVERBOUGHT:
                 rsi_signal = True
-                rsi_detail += " \u8d85\u4e70\u533a\u62d0\u5934 \u2713"
+                rsi_detail += " 超买区拐头 ✓"
             rsi_vals = ind.rsi(closes)
             if len(rsi_vals) >= 3 and all(v is not None for v in rsi_vals[-3:]):
                 p2, p1, cur = rsi_vals[-3], rsi_vals[-2], rsi_val
                 if p2 > p1 and p1 < cur and cur < RSI_OVERSOLD + 10:
                     rsi_signal = True
-                    rsi_detail += " (RSI\u5e95\u80cc\u79bb\u53cd\u5f39 \u2713)"
+                    rsi_detail += " (RSI底背离反弹 ✓)"
                 elif p2 < p1 and p1 > cur and cur > RSI_OVERBOUGHT - 10:
                     rsi_signal = True
-                    rsi_detail += " (RSI\u9876\u80cc\u79bb\u56de\u843d \u2713)"
+                    rsi_detail += " (RSI顶背离回落 ✓)"
         if rsi_signal:
             result["signals"].append({"name": "RSI", "found": True, "detail": rsi_detail})
             result["signals_found"] += 1
         else:
             result["signals"].append({"name": "RSI", "found": False, "detail": rsi_detail})
         result["total_checked"] += 1
-        # d) \u6210\u4ea4\u91cf
+        # d) 成交量
         vol = ind.analyze_volume(k15)
         if vol["surge"]:
-            result["signals"].append({"name": "\u6210\u4ea4\u91cf", "found": True, "detail": f"\u653e\u91cf{vol['ratio']}x\uff08\u57fa\u7ebf{vol['avg_volume']:.0f} \u2192 \u8fd1\u671f{vol['recent_volume']:.0f}\uff09\u2713"})
+            result["signals"].append({"name": "成交量", "found": True, "detail": f"放量{vol['ratio']}x（基线{vol['avg_volume']:.0f} → 近期{vol['recent_volume']:.0f}）✓"})
             result["signals_found"] += 1
         else:
-            result["signals"].append({"name": "\u6210\u4ea4\u91cf", "found": False, "detail": f"\u91cf\u6bd4{vol['ratio']}x\uff08\u57fa\u7ebf{vol['avg_volume']:.0f} \u2192 \u8fd1\u671f{vol['recent_volume']:.0f}\uff09"})
+            result["signals"].append({"name": "成交量", "found": False, "detail": f"量比{vol['ratio']}x（基线{vol['avg_volume']:.0f} → 近期{vol['recent_volume']:.0f}）"})
         result["total_checked"] += 1
-        # e) \u8ba2\u5355\u7c3f - \u5728\u5916\u90e8\u5206\u6790
-        result["signals"].append({"name": "\u8ba2\u5355\u7c3f", "found": False, "detail": "\u8be6\u89c1\u3010\u8ba2\u5355\u7c3f\u6d41\u52a8\u6027\u5206\u6790\u3011"})
+        # e) 订单簿 - 在外部分析
+        result["signals"].append({"name": "订单簿", "found": False, "detail": "详见【订单簿流动性分析】"})
         result["has_entry"] = result["signals_found"] >= self.mode_config.min_signals
         result["required"] = self.mode_config.min_signals
         return result
 
     def analyze(self) -> Dict:
         logger.info(f"\n{'='*60}")
-        logger.info(f"\U0001f680 BTC/USDT \u91cf\u5316\u4ea4\u6613\u5206\u6790 | \u6a21\u5f0f: {self.mode} | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"🚀 BTC/USDT 量化交易分析 | 模式: {self.mode} | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         logger.info(f"{'='*60}\n")
         self.fetch_all_data()
         news = check_high_impact_events()
@@ -165,12 +166,13 @@ class BTCAnalyzer:
         sentiment = score_sentiment(self.current_price)
         news_vol = check_news_volatility(self.parsed.get("15m", []))
         onchain = check_onchain()
+        pred_market = get_prediction_market_signal()
         ob = analyze_order_book()
         taker = analyze_taker_volumes()
         atr_val = tech.get("15m", {}).get("atr", 0)
         direction = tech["preferred_direction"]
         sentiment_conflict = (sentiment["total"] >= 2 and direction == "short") or (sentiment["total"] <= -2 and direction == "long")
-        chain_pressure = "\u629b\u538b" in onchain["status"]
+        chain_pressure = onchain.get("score", 0) < -1  # Negative on-chain score = bearish pressure
         rm = RiskManager(self.mode, atr_val, self.current_price) if atr_val > 0 else None
         risk_result = {}
         if rm and direction != "wait":
@@ -178,24 +180,28 @@ class BTCAnalyzer:
         now = datetime.utcnow()
         is_weekend = now.weekday() >= 5
         is_low_volume = tech.get("15m", {}).get("volume", {}).get("recent_volume", 0) < MIN_15M_VOLUME_BTC
-        signal_grade = "\u6b63\u5e38"
+        signal_grade = "正常"
         if is_weekend and WEEKEND_DEGRADE:
-            signal_grade = "\u964d\u7ea7\uff08\u5468\u672b\uff09"
+            signal_grade = "降级（周末）"
         elif is_low_volume and LOW_VOLUME_DEGRADE:
-            signal_grade = "\u964d\u7ea7\uff08\u4f4e\u6d41\u52a8\u6027\uff09"
+            signal_grade = "降级（低流动性）"
         if sentiment_conflict:
-            signal_grade = f"\u964d\u7ea7\uff08\u60c5\u7eea\u51b2\u7a81\uff1a\u60c5\u7eea{sentiment['label']} vs \u65b9\u5411{direction}\uff09"
-        can_trade = signals_15m["has_entry"] and not news["has_event"] and direction != "wait" and not is_weekend and not is_low_volume and not sentiment_conflict
+            signal_grade = f"降级（情绪冲突：情绪{sentiment['label']} vs 方向{direction}）"
+        onchain_bearish = onchain.get("score", 0) <= -3
+        can_trade = (signals_15m["has_entry"] and not news["has_event"] and direction != "wait"
+                     and not is_weekend and not is_low_volume and not sentiment_conflict
+                     and not onchain_bearish)
         self.results = {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "mode": self.mode,
                         "price": self.current_price, "technical": tech, "signals_15m": signals_15m,
                         "sentiment": sentiment, "news": news, "news_volatility": news_vol,
-                        "onchain": onchain, "orderbook": ob, "taker": taker, "risk": risk_result,
+                        "onchain": onchain, "prediction_market": pred_market,
+                        "orderbook": ob, "taker": taker, "risk": risk_result,
                         "signal_grade": signal_grade, "can_trade": can_trade}
         return self.results
 
     def generate_report(self) -> str:
         r = self.results
-        mode_label = "\u6fc0\u8fdb" if self.mode == "aggressive" else "\u7a33\u5065"
+        mode_label = "激进" if self.mode == "aggressive" else "稳健"
         tech = r.get("technical", {})
         signals = r.get("signals_15m", {})
         sentiment = r.get("sentiment", {})
@@ -210,84 +216,88 @@ class BTCAnalyzer:
         resistances = sr.get("resistance", [])
         lines = []
         lines.append("---")
-        lines.append(f"**\u4ea4\u6613\u6a21\u5f0f**\uff1a{mode_label}")
-        lines.append(f"**\u591a\u5468\u671f\u65b9\u5411**\uff1a{tech.get('overall_trend', 'N/A')}")
+        lines.append(f"**交易模式**：{mode_label}")
+        lines.append(f"**多周期方向**：{tech.get('overall_trend', 'N/A')}")
         lines.append(f"  - 4H: {tech.get('4h', {}).get('description', 'N/A')}")
         lines.append(f"  - 1H: {tech.get('1h', {}).get('description', 'N/A')}")
-        lines.append(f"**\u5173\u952e\u4ef7\u4f4d**\uff1a")
-        lines.append(f"  - \u652f\u6491: {' / '.join(f'{s:.1f}' for s in supports[:3]) if supports else 'N/A'}")
-        lines.append(f"  - \u963b\u529b: {' / '.join(f'{r:.1f}' for r in resistances[:3]) if resistances else 'N/A'}")
-        lines.append(f"**\u5f53\u524d\u4ef7\u683c**\uff1a{r.get('price', 0):,.2f}")
+        lines.append(f"**关键价位**：")
+        lines.append(f"  - 支撑: {' / '.join(f'{s:.1f}' for s in supports[:3]) if supports else 'N/A'}")
+        lines.append(f"  - 阻力: {' / '.join(f'{r:.1f}' for r in resistances[:3]) if resistances else 'N/A'}")
+        lines.append(f"**当前价格**：{r.get('price', 0):,.2f}")
         lines.append(f"")
-        lines.append(f"**\u60c5\u7eea\u8bc4\u5206**\uff1a{sentiment.get('total', 0)}\u5206 {sentiment.get('label', 'N/A')}")
+        lines.append(f"**情绪评分**：{sentiment.get('total', 0)}分 {sentiment.get('label', 'N/A')}")
         for d in sentiment.get("details", []):
             lines.append(f"  - {d.get('indicator')}: {d.get('value')} ({d.get('note')})")
         lines.append(f"")
-        lines.append(f"**\u65b0\u95fb\u72b6\u6001**\uff1a{'\u26a0\ufe0f ' + '; '.join(news.get('events', [])) if news.get('has_event') else '\u65e0\u91cd\u5927\u4e8b\u4ef6 \u2705'}")
+        lines.append(f"**新闻状态**：{'⚠️ ' + '; '.join(news.get('events', [])) if news.get('has_event') else '无重大事件 ✅'}")
         if news.get("has_event"):
             lines.append(f"  > {news.get('warning')}")
-        lines.append(f"**\u65b0\u95fb\u6ce2\u52a8**\uff1a{news_vol.get('note', 'N/A')} (\u6700\u5927\u6ce2\u52a8 {news_vol.get('max_move_pct', 0)}%)")
+        lines.append(f"**新闻波动**：{news_vol.get('note', 'N/A')} (最大波动 {news_vol.get('max_move_pct', 0)}%)")
         lines.append(f"")
-        lines.append(f"**\u94fe\u4e0a\u6570\u636e**\uff1a{onchain.get('status', 'N/A')}")
+        pred_market = r.get("prediction_market", {})
+        lines.append(f"**预测市场**：{pred_market.get('note', 'N/A')}")
+        lines.append(f"**链上数据**：{onchain.get('status', 'N/A')}")
         for d in onchain.get("details", []):
             lines.append(f"  - {d}")
         lines.append(f"")
-        lines.append(f"**\u8ba2\u5355\u7c3f**\uff1a{ob.get('imbalance', 'N/A')}")
+        lines.append(f"**订单簿**：{ob.get('imbalance', 'N/A')}")
         for d in ob.get("details", []):
             lines.append(f"  - {d}")
-        lines.append(f"**\u5403\u5355\u5206\u6790**\uff1a{'\u26a0\ufe0f \u6050\u614c\u4fe1\u53f7!' if taker.get('panic') else '\u6b63\u5e38'}")
+        lines.append(f"**吃单分析**：{'⚠️ 恐慌信号!' if taker.get('panic') else '正常'}")
         for d in taker.get("details", []):
             lines.append(f"  - {d}")
         lines.append(f"")
-        lines.append(f"**15\u5206\u949f\u4fe1\u53f7**\uff08\u9700\u8981\u2265{signals.get('required', 3)}\u4e2a\uff09\uff1a")
+        lines.append(f"**15分钟信号**（需要≥{signals.get('required', 3)}个）：")
         for s in signals.get("signals", []):
-            mark = "\u2705" if s.get("found") else "\u274c"
+            mark = "✅" if s.get("found") else "❌"
             lines.append(f"  {mark} {s['name']}: {s['detail']}")
-        lines.append(f"  \u603b\u8ba1: {signals.get('signals_found', 0)}/{signals.get('total_checked', 5)}")
+        lines.append(f"  总计: {signals.get('signals_found', 0)}/{signals.get('total_checked', 5)}")
         lines.append(f"")
-        lines.append(f"**\u4fe1\u53f7\u7b49\u7ea7**\uff1a{r.get('signal_grade', 'N/A')}")
+        lines.append(f"**信号等级**：{r.get('signal_grade', 'N/A')}")
         lines.append(f"")
-        lines.append(f"**\u64cd\u4f5c\u5efa\u8bae**\uff1a")
+        lines.append(f"**操作建议**：")
         if r.get("can_trade"):
-            lines.append(f"  - \u65b9\u5411\uff1a{risk.get('direction', 'N/A')}")
-            lines.append(f"  - \u5165\u573a\u533a\u95f4\uff1a{risk.get('entry', 0):,.1f}")
-            lines.append(f"  - \u6b62\u635f\uff1a{risk.get('stop_loss', 0):,.1f}")
-            lines.append(f"  - \u6b62\u76c81\uff1a{risk.get('take_profit_1', 0):,.1f}")
-            lines.append(f"  - \u6b62\u76c82\uff08\u79fb\u52a8\u6b62\u635f\uff09\uff1a{risk.get('take_profit_2_params', {}).get('description', 'N/A')}")
-            lines.append(f"  - \u4ed3\u4f4d\uff1a{risk.get('position', {}).get('final_pct', 0)*100:.2f}% = {risk.get('position', {}).get('position_value', 0):,.2f} USDT ({risk.get('position', {}).get('position_btc', 0):.6f} BTC)")
-            lines.append(f"  - \u4ed3\u4f4d\u7cfb\u6570\u660e\u7ec6\uff1a{risk.get('position', {}).get('factor_breakdown', 'N/A')}")
-            lines.append(f"  - \u672c\u5355\u98ce\u9669\uff1a{risk.get('risk_per_trade', 0):.2f}% | \u76c8\u4e8f\u6bd4\uff1a{risk.get('reward_risk', 0):.2f}:1")
+            lines.append(f"  - 方向：{risk.get('direction', 'N/A')}")
+            lines.append(f"  - 入场区间：{risk.get('entry', 0):,.1f}")
+            lines.append(f"  - 止损：{risk.get('stop_loss', 0):,.1f}")
+            lines.append(f"  - 止盈1：{risk.get('take_profit_1', 0):,.1f}")
+            lines.append(f"  - 止盈2（移动止损）：{risk.get('take_profit_2_params', {}).get('description', 'N/A')}")
+            lines.append(f"  - 仓位：{risk.get('position', {}).get('final_pct', 0)*100:.2f}% = {risk.get('position', {}).get('position_value', 0):,.2f} USDT ({risk.get('position', {}).get('position_btc', 0):.6f} BTC)")
+            lines.append(f"  - 仓位系数明细：{risk.get('position', {}).get('factor_breakdown', 'N/A')}")
+            lines.append(f"  - 本单风险：{risk.get('risk_per_trade', 0):.2f}% | 盈亏比：{risk.get('reward_risk', 0):.2f}:1")
         else:
-            lines.append(f"  - \u5f53\u524d\u4e0d\u6ee1\u8db3\u5165\u573a\u6761\u4ef6\uff0c\u5efa\u8bae\u89c2\u671b \U0001f440")
+            lines.append(f"  - 当前不满足入场条件，建议观望 👀")
             reasons = []
             if not signals.get("has_entry"):
-                reasons.append(f"15\u5206\u949f\u4fe1\u53f7\u4e0d\u8db3\uff08{signals.get('signals_found', 0)}/{signals.get('required', 3)}\uff09")
+                reasons.append(f"15分钟信号不足（{signals.get('signals_found', 0)}/{signals.get('required', 3)}）")
             if news.get("has_event"):
-                reasons.append("\u5b8f\u89c2\u4e8b\u4ef6\u7a97\u53e3\u671f")
+                reasons.append("宏观事件窗口期")
             if tech.get("preferred_direction") == "wait":
-                reasons.append("\u591a\u5468\u671f\u65b9\u5411\u4e0d\u660e\u786e")
-            if r.get("signal_grade") != "\u6b63\u5e38":
-                reasons.append(f"\u4fe1\u53f7\u964d\u7ea7\uff08{r.get('signal_grade')}\uff09")
+                reasons.append("多周期方向不明确")
+            if r.get("signal_grade") != "正常":
+                reasons.append(f"信号降级（{r.get('signal_grade')}）")
+            if onchain.get("score", 0) <= -3:
+                reasons.append("链上数据偏空（鲸鱼/活跃地址等指标）")
             for reason in reasons:
-                lines.append(f"  - \u274c {reason}")
+                lines.append(f"  - ❌ {reason}")
         lines.append(f"")
-        lines.append(f"**\u98ce\u9669\u63d0\u793a**\uff1a")
-        lines.append(f"  - \u6570\u636e\u6e90\u4e3aBinance\u73b0\u8d27API\uff0c\u4e0d\u542bU\u672c\u4f4d\u5408\u7ea6\u6df1\u5ea6")
-        lines.append(f"  - \u60c5\u7eea\u6570\u636e\u4e2d\u793e\u4ea4\u5a92\u4f53\u7ef4\u5ea6\u4e3a\u5360\u4f4d\u72b6\u6001")
-        lines.append(f"  - \u94fe\u4e0a\u6570\u636e\u9700CryptoQuant/Glassnode API\u5b8c\u5584")
-        lines.append(f"  - 15\u5206\u949f\u7ea7\u522b\u4fe1\u53f7\u566a\u97f3\u8f83\u9ad8\uff0c\u5efa\u8bae\u4ee54H\u65b9\u5411\u4e3a\u4e3b")
+        lines.append(f"**风险提示**：")
+        lines.append(f"  - 数据源为Binance现货API，不含U本位合约深度")
+        lines.append(f"  - 情绪数据中社交媒体维度为占位状态")
+        lines.append(f"  - 链上数据需CryptoQuant/Glassnode API完善")
+        lines.append(f"  - 15分钟级别信号噪音较高，建议以4H方向为主")
         lines.append(f"")
         tf_dir = tech.get('4h', {}).get('trend', '?')
         sg_count = signals.get('signals_found', 0)
         sg_req = signals.get('required', 3)
         emo = sentiment.get('label', '?')
-        lines.append(f"**\u672c\u5355\u903b\u8f91\u6458\u8981**\uff1a")
-        lines.append(f"  4H\u65b9\u5411={tf_dir} | 15M\u4fe1\u53f7={sg_count}/{sg_req} | \u60c5\u7eea={emo} | \u4fe1\u53f7\u7b49\u7ea7={r.get('signal_grade', 'N/A')}")
-        lines.append(f"  {'\u2705 \u53ef\u5f00\u5355' if r.get('can_trade') else '\u274c \u89c2\u671b'}")
+        lines.append(f"**本单逻辑摘要**：")
+        lines.append(f"  4H方向={tf_dir} | 15M信号={sg_count}/{sg_req} | 情绪={emo} | 信号等级={r.get('signal_grade', 'N/A')}")
+        lines.append(f"  {'✅ 可开单' if r.get('can_trade') else '❌ 观望'}")
         lines.append(f"")
-        lines.append(f"**\u81ea\u6211\u8fdb\u5316\u5efa\u8bae**\uff1a")
-        lines.append(f"  - \u5982\u679c\u8fde\u7eed\u51fa\u73b0\u4fe1\u53f7\u5145\u8db3\u4f46\u4e8f\u635f\u7684\u60c5\u51b5\uff0c\u8003\u8651\u63d0\u9ad8\u4fe1\u53f7\u9608\u503c\u81f34\u4e2a")
-        lines.append(f"  - \u5982\u679c\u9891\u7e41\u88ab\u6b62\u635f\u626b\u6389\uff0c\u53ef\u589e\u5927ATR\u500d\u6570\uff08\u6fc0\u8fdb\u21921.5\uff0c\u7a33\u5065\u21922.0\uff09")
-        lines.append(f"  - \u5982\u679c\u65b9\u5411\u5224\u65ad\u53cd\u590d\u5207\u6362\uff0c\u5efa\u8bae\u57284H EMA\u4e0a\u589e\u52a0200EMA\u8fc7\u6ee4")
+        lines.append(f"**自我进化建议**：")
+        lines.append(f"  - 如果连续出现信号充足但亏损的情况，考虑提高信号阈值至4个")
+        lines.append(f"  - 如果频繁被止损扫掉，可增大ATR倍数（激进→1.5，稳健→2.0）")
+        lines.append(f"  - 如果方向判断反复切换，建议在4H EMA上增加200EMA过滤")
         lines.append("---")
         return "\n".join(lines)

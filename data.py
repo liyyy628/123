@@ -1,10 +1,11 @@
 """
-????? - ? Binance REST API ??????
-????? urllib???????????????
+数据层 - 通过 Binance REST API 获取行情数据
+基于 urllib 实现，零外部依赖
 """
 import json
-import time
 import logging
+import os
+import time
 from datetime import datetime
 from urllib.request import Request, urlopen, build_opener, ProxyHandler
 from urllib.error import URLError, HTTPError
@@ -20,24 +21,67 @@ class APIError(Exception):
 
 
 # -- Proxy config --
-HTTP_PROXY = "http://127.0.0.1:7890"
-USE_PROXY = False  # set True to enable
+# Set via environment: export BINANCE_PROXY=http://127.0.0.1:7890
+# Or set USE_PROXY=True directly
+HTTP_PROXY = os.environ.get("BINANCE_PROXY", "http://127.0.0.1:7890")
+USE_PROXY = os.environ.get("BINANCE_USE_PROXY", "").lower() in ("1", "true", "yes")
+
+# Binance API fallback domains
+_BINANCE_DOMAINS = [
+    BINANCE_BASE,
+    "https://api.binance.us",
+    "https://api1.binance.com",
+    "https://api2.binance.com",
+    "https://api3.binance.com",
+]
+
+
+def _try_fetch_json(url: str, timeout: int = 10, opener=None) -> Any:
+    """Single attempt HTTP GET with the given opener."""
+    if opener is None:
+        opener = build_opener()
+    req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with opener.open(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode())
+
 
 def _fetch_json(url: str, retries: int = 3, timeout: int = 10) -> Any:
-    """http get -> json, with optional proxy"""
-    opener = build_opener(ProxyHandler({"http": HTTP_PROXY, "https": HTTP_PROXY})) if USE_PROXY else build_opener()
-    for attempt in range(retries):
-        try:
-            req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with opener.open(req, timeout=timeout) as resp:
-                return json.loads(resp.read().decode())
-        except (HTTPError, URLError, OSError) as e:
-            if attempt < retries - 1:
-                wait = (attempt + 1) * 1.5
-                logger.warning("[retry %d/%d] %s -> %s, %.1fs" % (attempt+1, retries, url, e, wait))
-                time.sleep(wait)
-            else:
-                raise APIError("API fail: %s -> %s" % (url, e)) from e
+    """HTTP GET -> JSON, with optional proxy and domain fallback.
+
+    Tries: 1) direct connection, 2) proxy connection, 3) alternate domains.
+    """
+    openers = []
+    if USE_PROXY and HTTP_PROXY:
+        openers.append(build_opener(ProxyHandler({"http": HTTP_PROXY, "https": HTTP_PROXY})))
+    openers.append(build_opener())
+
+    # Try alternate domains if the URL is from binance.com
+    urls_to_try = [url]
+    if "api.binance.com" in url:
+        for domain in _BINANCE_DOMAINS:
+            alt_url = url.replace("api.binance.com", domain.replace("https://", "").rstrip("/"))
+            if alt_url not in urls_to_try:
+                urls_to_try.append(alt_url)
+
+    last_error = None
+    for opener in openers:
+        for try_url in urls_to_try:
+            for attempt in range(retries):
+                try:
+                    return _try_fetch_json(try_url, timeout, opener)
+                except (HTTPError, URLError, OSError) as e:
+                    last_error = e
+                    if isinstance(e, HTTPError) and e.code == 451:
+                        # Geo-blocked, don't retry this URL
+                        break
+                    if attempt < retries - 1:
+                        wait = (attempt + 1) * 1.5
+                        logger.debug("[retry %d/%d] %s -> %s, %.1fs" % (attempt+1, retries, try_url, e, wait))
+                        time.sleep(wait)
+
+    raise APIError("API fail: all methods exhausted for %s, last error: %s" % (url, last_error))
+
+
 def kline_time_to_dt(timestamp_ms: int) -> datetime:
     return datetime.fromtimestamp(timestamp_ms / 1000)
 
@@ -86,25 +130,26 @@ def fetch_long_short_ratio(symbol: str = "BTCUSDT", period: str = "5m", limit: i
         data = _fetch_json(url)
         return float(data[0]["longShortRatio"]) if data else None
     except APIError:
-        logger.warning("\u65e0\u6cd5\u83b7\u53d6\u591a\u7a7a\u6bd4\uff0c\u8df3\u8fc7")
+        logger.warning("无法获取多空比，跳过")
         return None
 
 
 def fetch_fear_greed_index(limit: int = 1) -> Optional[int]:
-    url = f"https://api.alternative.me/fng/?limit={limit}"
+    url = "https://api.alternative.me/fng/?limit=%d" % limit
     try:
         data = _fetch_json(url)
         return int(data["data"][0]["value"])
     except (APIError, KeyError, IndexError, ValueError):
-        logger.warning("\u65e0\u6cd5\u83b7\u53d6\u6050\u60e7\u8d2a\u5a2a\u6307\u6570\uff0c\u8df3\u8fc7")
+        logger.warning("无法获取恐惧贪婪指数，跳过")
         return None
 
 
 def fetch_exchange_netflow(asset: str = "BTC") -> Optional[float]:
+    """Exchange netflow (deprecated - use onchain.py instead)."""
     try:
         url = f"{COINGECKO_BASE}/exchanges/binance/tickers?coin_ids=bitcoin"
         _fetch_json(url)
-        logger.info("\u94fe\u4e0a\u6570\u636e\uff1aCoinGecko \u514d\u8d39 API \u4e0d\u63d0\u4f9b\u4ea4\u6613\u6240\u51c0\u6d41\u91cf\uff0c\u8fd4\u56de None")
+        logger.info("链上数据：CoinGecko 免费 API 不提供交易所净流量，返回 None")
         return None
     except APIError:
         return None
@@ -119,6 +164,7 @@ def fetch_multi_tf_klines(symbol: str = "BTCUSDT") -> Dict[str, List]:
 
 
 def parse_klines_to_dicts(raw: List[List]) -> List[Dict]:
+    """Convert raw Binance kline list to list of dicts."""
     keys = ["time", "open", "high", "low", "close", "volume", "close_time",
             "quote_vol", "count", "taker_buy_vol", "taker_buy_quote", "ignore"]
     result = []
