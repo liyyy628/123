@@ -4,249 +4,225 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>BTC Direction Predictor</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:"SF Mono","Consolas","Menlo",monospace;background:#0a0e17;color:#e0e6ed;min-height:100vh}
-:root{--bg:#0a0e17;--bg2:#111827;--bg3:#1a2236;--green:#00d4aa;--red:#ff4d6a;--yellow:#f0b90b;--blue:#4da6ff;--border:#1f2937;--text2:#6b7280}
+body{font-family:"Segoe UI","Microsoft YaHei",sans-serif;background:#0a0e17;color:#e0e6ed;min-height:100vh}
+:root{--bg:#0a0e17;--bg2:#111827;--bg3:#1a2236;--g:#00d4aa;--r:#ff4d6a;--y:#f0b90b;--b:#4da6ff;--br:#1f2937;--t2:#6b7280}
 
-.header{
-  background:var(--bg2);border-bottom:1px solid var(--border);
-  padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
-}
-.logo{font-size:20px;font-weight:800;color:var(--yellow);letter-spacing:2px}
-.logo span{color:var(--text2);font-weight:400;font-size:13px;margin-left:8px}
-.price-big{font-size:28px;font-weight:700;letter-spacing:1px}
-.chg{font-size:13px;padding:2px 8px;border-radius:4px;font-weight:600}
-.chg.up{background:rgba(0,212,170,0.15);color:var(--green)}
-.chg.down{background:rgba(255,77,106,0.15);color:var(--red)}
-.stats{display:flex;gap:18px;font-size:12px;color:var(--text2)}
-.stats b{color:var(--text)}
-
-.container{max-width:1200px;margin:0 auto;padding:16px;}
-
-/* Prediction cards */
-.pred-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-.pred-card{
-  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
-  padding:20px;text-align:center;transition:border 0.3s;
-}
-.pred-card:hover{border-color:var(--blue)}
-.pred-card.up{border-color:rgba(0,212,170,0.4);box-shadow:0 0 20px rgba(0,212,170,0.06)}
-.pred-card.down{border-color:rgba(255,77,106,0.4);box-shadow:0 0 20px rgba(255,77,106,0.06)}
-.pred-card.neutral{border-color:rgba(240,185,11,0.3)}
-
-.pred-header{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:8px}
-.pred-arrow{font-size:48px;line-height:1;margin:4px 0}
-.pred-arrow.up{color:var(--green)}
-.pred-arrow.down{color:var(--red)}
-.pred-arrow.neutral{color:var(--yellow)}
-.pred-label{font-size:14px;font-weight:700;margin:4px 0 12px}
-.pred-label.up{color:var(--green)}.pred-label.down{color:var(--red)}.pred-label.neutral{color:var(--yellow)}
-
-/* Confidence bar */
-.conf-bar-wrap{background:var(--bg3);border-radius:6px;height:6px;margin:8px 0;overflow:hidden}
-.conf-bar{height:100%;border-radius:6px;transition:width 0.5s}
-.conf-bar.up{background:linear-gradient(90deg,var(--green),#00ffcc)}
-.conf-bar.down{background:linear-gradient(90deg,var(--red),#ff8099)}
-.conf-bar.neutral{background:linear-gradient(90deg,var(--yellow),#ffe066)}
-.conf-text{font-size:22px;font-weight:800}
-
-/* Candle info */
-.candle-info{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px;font-size:12px}
-.candle-info div{background:var(--bg3);padding:6px;border-radius:4px;text-align:center}
-.ci-label{color:var(--text2);font-size:10px}.ci-val{font-weight:700;font-size:15px}
-
-/* Progress bar */
-.progress{border-radius:4px;height:4px;margin-top:8px;background:var(--bg3);overflow:hidden}
-.progress-fill{height:100%;background:var(--blue);border-radius:4px;transition:width 1s linear}
-.progress-text{font-size:10px;color:var(--text2);margin-top:2px;text-align:right}
-
-/* Factors */
-.factor-list{margin-top:10px;text-align:left}
-.factor-row{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;font-size:11px;border-radius:3px;margin:2px 0}
-.factor-row.pos{background:rgba(0,212,170,0.05)}.factor-row.neg{background:rgba(255,77,106,0.05)}
-.factor-score{font-weight:700;font-size:13px}.factor-score.pos{color:var(--green)}.factor-score.neg{color:var(--red)}
-
-/* Bottom row */
-.bottom-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
-.card{
-  background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;
-}
-.card-title{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:10px}
-canvas{width:100%!important;height:280px!important}
-
-/* Summary row */
-.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.summary-item{text-align:center;background:var(--bg3);padding:10px 6px;border-radius:6px}
-.summary-val{font-size:18px;font-weight:700}.summary-label{font-size:10px;color:var(--text2);margin-top:2px}
-
-.footer{text-align:center;padding:10px;color:var(--text2);font-size:10px;border-top:1px solid var(--border);margin-top:16px}
-.live-dot{width:6px;height:6px;display:inline-block;background:var(--green);border-radius:50%;animation:pulse 2s infinite;margin-right:4px}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-.flash{animation:flash 0.5s}
-@keyframes flash{0%{opacity:0.5}100%{opacity:1}}
+.header{background:var(--bg2);border-bottom:1px solid var(--br);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.logo{font-size:22px;font-weight:800;color:var(--y);letter-spacing:2px}
+.pb{font-size:32px;font-weight:700;letter-spacing:1px}
+.cg{font-size:14px;padding:3px 10px;border-radius:4px;font-weight:600}
+.cg.up{background:rgba(0,212,170,0.15);color:var(--g)}.cg.down{background:rgba(255,77,106,0.15);color:var(--r)}
+.sb{font-size:11px;color:var(--t2)}.sb b{color:#e0e6ed}
+.ct{max-width:1100px;margin:0 auto;padding:14px}
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.pc{background:var(--bg2);border:1px solid var(--br);border-radius:12px;padding:18px 16px;text-align:center;transition:all 0.3s}
+.pc.up{border-color:rgba(0,212,170,0.4);box-shadow:0 0 24px rgba(0,212,170,0.05)}
+.pc.down{border-color:rgba(255,77,106,0.4);box-shadow:0 0 24px rgba(255,77,106,0.05)}
+.pc.neutral{border-color:rgba(240,185,11,0.3)}
+.ph{font-size:11px;letter-spacing:2px;color:var(--t2);margin-bottom:6px;text-transform:uppercase}
+.pa{font-size:52px;line-height:1.1;margin:2px 0}
+.pa.up{color:var(--g)}.pa.down{color:var(--r)}.pa.neutral{color:var(--y)}
+.pl{font-size:15px;font-weight:700;margin:2px 0 10px}
+.pl.up{color:var(--g)}.pl.down{color:var(--r)}.pl.neutral{color:var(--y)}
+.bw{background:var(--bg3);border-radius:6px;height:6px;margin:6px 0;overflow:hidden}
+.bf{height:100%;border-radius:6px;transition:width 0.4s}
+.bf.up{background:linear-gradient(90deg,var(--g),#00ffcc)}
+.bf.down{background:linear-gradient(90deg,var(--r),#ff8099)}
+.bf.neutral{background:linear-gradient(90deg,var(--y),#ffe066)}
+.bv{font-size:24px;font-weight:800}
+.ci{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px}
+.ci div{background:var(--bg3);padding:6px;border-radius:4px;text-align:center}
+.cl{color:var(--t2);font-size:10px}.cv{font-weight:700;font-size:14px}
+.pb2{border-radius:4px;height:3px;margin-top:6px;background:var(--bg3);overflow:hidden}
+.pf2{height:100%;background:var(--b);border-radius:4px;transition:width 1s linear}
+.pt{font-size:10px;color:var(--t2);margin-top:2px;text-align:right}
+.fl{margin-top:8px;text-align:left}
+.fr{display:flex;justify-content:space-between;align-items:center;padding:3px 6px;font-size:11px;border-radius:3px;margin:1px 0}
+.fr.pos{background:rgba(0,212,170,0.04)}.fr.neg{background:rgba(255,77,106,0.04)}
+.fs{font-weight:700;font-size:13px}.fs.pos{color:var(--g)}.fs.neg{color:var(--r)}
+.bg{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.cd{background:var(--bg2);border:1px solid var(--br);border-radius:12px;padding:14px}
+.ct2{font-size:11px;letter-spacing:2px;color:var(--t2);margin-bottom:10px;text-transform:uppercase}
+canvas{width:100%!important;height:260px!important}
+.sm{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.si{text-align:center;background:var(--bg3);padding:10px 6px;border-radius:6px}
+.sv{font-size:17px;font-weight:700}.sl2{font-size:9px;color:var(--t2);margin-top:3px}
+.ft{text-align:center;padding:10px;color:var(--t2);font-size:10px;border-top:1px solid var(--br);margin-top:14px}
+.ld{width:6px;height:6px;display:inline-block;background:var(--g);border-radius:50%;animation:pk 2s infinite;margin-right:6px}
+@keyframes pk{0%,100%{opacity:1}50%{opacity:0.2}}
+.err{background:var(--bg2);border:1px solid var(--r);padding:20px;text-align:center;border-radius:12px;margin:20px}
+.loading{padding:40px;text-align:center;color:var(--t2);font-size:14px}
+.loading span{animation:pk 1.5s infinite;font-size:20px}
+@media(max-width:768px){.pg,.bg{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-
 <div class="header">
-  <div class="logo">BTC<span>方向预测</span></div>
-  <div>
-    <div class="price-big" id="price">---</div>
-    <div class="chg" id="change24"></div>
+  <div class="logo">BTC<span style="color:var(--t2);font-weight:400;font-size:12px;margin-left:6px">方向预测</span></div>
+  <div><div class="pb" id="price">---</div><div class="cg" id="change24"></div></div>
+  <div class="sb">24H高 <b id="h24">---</b>&nbsp;&nbsp;|&nbsp;&nbsp;24H低 <b id="l24">---</b>&nbsp;&nbsp;|&nbsp;&nbsp;量 <b id="v24">---</b>&nbsp;&nbsp;|&nbsp;&nbsp;<span class="ld"></span><b id="ts">---</b></div>
+</div>
+
+<div class="ct" id="content" style="display:none">
+  <div class="pg">
+    <div class="pc" id="card5m">
+      <div class="ph">5分钟预测</div>
+      <div class="pa" id="a5">--</div>
+      <div class="pl" id="l5">--</div>
+      <div class="bv" id="conf5">--</div>
+      <div class="bw"><div class="bf" id="bf5" style="width:0%"></div></div>
+      <div class="pb2"><div class="pf2" id="pf5" style="width:0%"></div></div>
+      <div class="pt" id="pt5">--</div>
+      <div class="ci" id="ci5"></div>
+      <div class="fl" id="fl5"></div>
+    </div>
+    <div class="pc" id="card15m">
+      <div class="ph">15分钟预测</div>
+      <div class="pa" id="a15">--</div>
+      <div class="pl" id="l15">--</div>
+      <div class="bv" id="conf15">--</div>
+      <div class="bw"><div class="bf" id="bf15" style="width:0%"></div></div>
+      <div class="pb2"><div class="pf2" id="pf15" style="width:0%"></div></div>
+      <div class="pt" id="pt15">--</div>
+      <div class="ci" id="ci15"></div>
+      <div class="fl" id="fl15"></div>
+    </div>
   </div>
-  <div class="stats">
-    <div>24H高 <b id="h24">---</b></div>
-    <div>24H低 <b id="l24">---</b></div>
-    <div>量 <b id="v24">---</b></div>
-    <div><span class="live-dot"></span><b id="ts">---</b></div>
+  <div class="bg">
+    <div class="cd"><div class="ct2">15分钟走势</div><canvas id="chart"></canvas></div>
+    <div class="cd"><div class="ct2">盘口概览</div><div class="sm" id="summary"></div></div>
   </div>
 </div>
 
-<div class="container">
-  <!-- Prediction Cards -->
-  <div class="pred-grid">
-    <div class="pred-card" id="card5">
-      <div class="pred-header">5分钟方向预测</div>
-      <div class="pred-arrow" id="arrow5">--</div>
-      <div class="pred-label" id="label5">--</div>
-      <div class="conf-text" id="conf5">--</div>
-      <div class="conf-bar-wrap"><div class="conf-bar" id="bar5" style="width:0%"></div></div>
-      <div class="progress"><div class="progress-fill" id="prog5" style="width:0%"></div></div>
-      <div class="progress-text" id="progText5">--</div>
-      <div class="candle-info" id="candle5"></div>
-      <div class="factor-list" id="factors5"></div>
-    </div>
-
-    <div class="pred-card" id="card15">
-      <div class="pred-header">15分钟方向预测</div>
-      <div class="pred-arrow" id="arrow15">--</div>
-      <div class="pred-label" id="label15">--</div>
-      <div class="conf-text" id="conf15">--</div>
-      <div class="conf-bar-wrap"><div class="conf-bar" id="bar15" style="width:0%"></div></div>
-      <div class="progress"><div class="progress-fill" id="prog15" style="width:0%"></div></div>
-      <div class="progress-text" id="progText15">--</div>
-      <div class="candle-info" id="candle15"></div>
-      <div class="factor-list" id="factors15"></div>
-    </div>
-  </div>
-
-  <!-- Bottom: Chart + Summary -->
-  <div class="bottom-grid">
-    <div class="card">
-      <div class="card-title">15分钟走势图</div>
-      <canvas id="chart"></canvas>
-    </div>
-    <div class="card">
-      <div class="card-title">盘口概览</div>
-      <div class="summary" id="summary"></div>
-    </div>
-  </div>
-</div>
-
-<div class="footer">
-  BTC/USDT 方向预测系统 · 5因子评分模型 · <span id="refreshHint">每15秒刷新</span>
-</div>
+<div class="err" id="error" style="display:none"><div style="font-size:18px;margin-bottom:8px">连接失败</div><div style="color:var(--t2);font-size:13px" id="errMsg"></div></div>
+<div class="loading" id="loading"><span>●</span> 加载中...</div>
+<div class="ft">BTC/USDT 方向预测 · 5因子评分 · <span id="rh"></span></div>
 
 <script>
-let chart;
-function icon(dir){ return dir=='up'?'\u2191':(dir=='down'?'\u2193':'\u2194'); }
-function label(dir){ return dir=='up'?'看涨':(dir=='down'?'看跌':'震荡'); }
+var chart = null;
+var tried = 0;
+
+function icon(d){return d=='up'?'\u2191':(d=='down'?'\u2193':'\u2194');}
+function txt(d){return d=='up'?'看涨':(d=='down'?'看跌':'震荡');}
 
 function update(d) {
-  // Header
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+  document.getElementById('error').style.display = 'none';
+
   document.getElementById('price').textContent = '$' + d.price.toLocaleString();
-  const c = document.getElementById('change24');
+  var c = document.getElementById('change24');
   c.textContent = (d.change24>=0?'+':'') + d.change24 + '%';
-  c.className = 'chg ' + (d.change24>=0?'up':'down');
+  c.className = 'cg ' + (d.change24>=0?'up':'down');
   document.getElementById('h24').textContent = '$' + Math.round(d.high24).toLocaleString();
   document.getElementById('l24').textContent = '$' + Math.round(d.low24).toLocaleString();
   document.getElementById('v24').textContent = Math.round(d.vol24).toLocaleString() + ' BTC';
-  document.getElementById('ts').textContent = d.ts || '---';
+  document.getElementById('ts').textContent = (d.ts||'').replace(' UTC','');
+  document.getElementById('rh').textContent = '刷新: ' + new Date().toLocaleTimeString();
 
-  // Predictions
-  [['5m', d.pred_5m], ['15m', d.pred_15m]].forEach(([tf, p]) => {
-    if (!p) return;
-    const dir = p.direction;
-    document.getElementById('card'+tf).className = 'pred-card ' + dir;
-    document.getElementById('arrow'+tf).textContent = icon(dir);
-    document.getElementById('arrow'+tf).className = 'pred-arrow ' + dir;
-    document.getElementById('label'+tf).textContent = label(dir);
-    document.getElementById('label'+tf).className = 'pred-label ' + dir;
-    document.getElementById('conf'+tf).textContent = p.confidence + '% 置信度';
-    document.getElementById('bar'+tf).style.width = p.confidence + '%';
-    document.getElementById('bar'+tf).className = 'conf-bar ' + dir;
-    document.getElementById('prog'+tf).style.width = p.candle_pct + '%';
-    document.getElementById('progText'+tf).textContent = 'K线进度 ' + p.candle_pct + '%';
-
-    // Candle info
-    document.getElementById('candle'+tf).innerHTML =
-      '<div><div class="ci-label">开盘</div><div class="ci-val">$' + p.open_price.toLocaleString() + '</div></div>'+
-      '<div><div class="ci-label">当前</div><div class="ci-val" style="color:'+(p.change_pct>=0?'var(--green)':'var(--red)')+'">$' + p.price.toLocaleString() + '</div></div>'+
-      '<div><div class="ci-label">涨跌幅</div><div class="ci-val" style="color:'+(p.change_pct>=0?'var(--green)':'var(--red)')+'">'+(p.change_pct>=0?'+':'')+p.change_pct.toFixed(4)+'%</div></div>'+
-      '<div><div class="ci-label">K线状态</div><div class="ci-val" style="color:'+(p.change_pct>=0?'var(--green)':'var(--red)')+'">'+p.candle_status+'</div></div>';
-
-    // Factors
-    let fHTML = '';
-    p.factors.forEach(f => {
-      const cls = f.score > 0 ? 'pos' : (f.score < 0 ? 'neg' : '');
-      fHTML += '<div class="factor-row ' + cls + '"><span>' + f.name + ' <span style="color:var(--text2);font-size:10px">' + f.detail + '</span></span><span class="factor-score ' + cls + '">' + (f.score>0?'+':'') + f.score + '</span></div>';
+  // Prediction cards
+  [['5m',d.pred_5m],['15m',d.pred_15m]].forEach(function(v){
+    var id = v[0]=='5m'?'5':'15';
+    var p = v[1]; if(!p) return;
+    var dir = p.direction;
+    document.getElementById('card'+id+'m').className = 'pc ' + dir;
+    document.getElementById('a'+id).textContent = icon(dir);
+    document.getElementById('a'+id).className = 'pa ' + dir;
+    document.getElementById('l'+id).textContent = txt(dir);
+    document.getElementById('l'+id).className = 'pl ' + dir;
+    document.getElementById('conf'+id).textContent = p.confidence + '% 置信度';
+    document.getElementById('bf'+id).style.width = p.confidence + '%';
+    document.getElementById('bf'+id).className = 'bf ' + dir;
+    document.getElementById('pf'+id).style.width = p.candle_pct + '%';
+    document.getElementById('pt'+id).textContent = 'K线进度 ' + p.candle_pct + '%';
+    document.getElementById('ci'+id).innerHTML =
+      '<div><div class="cl">开盘</div><div class="cv">$' + p.open_price.toLocaleString() + '</div></div>'+
+      '<div><div class="cl">当前</div><div class="cv" style="color:'+(p.change_pct>=0?'var(--g)':'var(--r)')+'">$' + p.price.toLocaleString() + '</div></div>'+
+      '<div><div class="cl">涨跌</div><div class="cv" style="color:'+(p.change_pct>=0?'var(--g)':'var(--r)')+'">'+(p.change_pct>=0?'+':'')+p.change_pct.toFixed(4)+'%</div></div>'+
+      '<div><div class="cl">状态</div><div class="cv" style="color:'+(p.change_pct>=0?'var(--g)':'var(--r)')+'">'+p.candle_status+'</div></div>';
+    var fh = '';
+    p.factors.forEach(function(f){
+      var cl = f.score>0?'pos':(f.score<0?'neg':'');
+      fh += '<div class="fr ' + cl + '"><span>' + f.name + ' <span style="color:var(--t2);font-size:10px">' + f.detail + '</span></span><span class="fs ' + cl + '">' + (f.score>0?'+':'') + f.score + '</span></div>';
     });
-    document.getElementById('factors'+tf).innerHTML = fHTML;
+    document.getElementById('fl'+id).innerHTML = fh;
   });
 
-  // Chart
-  updateChart(d.chart || []);
+  // Chart - check Chart.js loaded
+  if (typeof Chart === 'undefined') return;
+  updateChart(d.chart||[]);
 
   // Summary
   document.getElementById('summary').innerHTML =
-    '<div class="summary-item"><div class="summary-val" id="s5dir">'+icon(d.pred_5m.direction)+' '+label(d.pred_5m.direction)+'</div><div class="summary-label">5M预测</div></div>'+
-    '<div class="summary-item"><div class="summary-val" id="s15dir">'+icon(d.pred_15m.direction)+' '+label(d.pred_15m.direction)+'</div><div class="summary-label">15M预测</div></div>'+
-    '<div class="summary-item"><div class="summary-val">$'+Math.round(d.high24).toLocaleString()+'</div><div class="summary-label">24H高</div></div>'+
-    '<div class="summary-item"><div class="summary-val">$'+Math.round(d.low24).toLocaleString()+'</div><div class="summary-label">24H低</div></div>';
+    '<div class="si"><div class="sv">'+icon(d.pred_5m.direction)+' '+txt(d.pred_5m.direction)+'</div><div class="sl2">5M预测</div></div>'+
+    '<div class="si"><div class="sv">'+icon(d.pred_15m.direction)+' '+txt(d.pred_15m.direction)+'</div><div class="sl2">15M预测</div></div>'+
+    '<div class="si"><div class="sv">$'+Math.round(d.high24).toLocaleString()+'</div><div class="sl2">24H高</div></div>'+
+    '<div class="si"><div class="sv">$'+Math.round(d.low24).toLocaleString()+'</div><div class="sl2">24H低</div></div>';
 }
 
 function updateChart(data) {
-  const labels = data.map(c => new Date(c.t).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}));
-  const closes = data.map(c => c.c);
-  const opens = data.map(c => c.o);
+  if (!data || !data.length) return;
+  try {
+    var labels = data.map(function(c){var d=new Date(c.t);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');});
+    var closes = data.map(function(c){return c.c;});
+    if (chart) chart.destroy();
+    var ctx = document.getElementById('chart');
+    ctx.height = 260;
+    chart = new Chart(ctx.getContext('2d'),{
+      type:'line',
+      data:{labels:labels,datasets:[{data:closes,borderColor:'#f0b90b',backgroundColor:'rgba(240,185,11,0.06)',borderWidth:1.5,pointRadius:0,fill:true,tension:0.1}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{color:'#4a5568',font:{size:9},maxTicksLimit:8},grid:{color:'rgba(31,41,55,0.3)'}},
+                y:{position:'right',ticks:{color:'#4a5568',font:{size:9},callback:function(v){return '$'+v.toLocaleString();}},grid:{color:'rgba(31,41,55,0.3)'}}}}
+    });
+  } catch(e) { console.error('Chart error:', e); }
+}
 
-  if (chart) chart.destroy();
-  const ctx = document.getElementById('chart').getContext('2d');
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'BTC',
-        data: closes,
-        borderColor: '#f0b90b',
-        backgroundColor: 'rgba(240,185,11,0.06)',
-        borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.1,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      animation: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#4a5568', font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: 'rgba(31,41,55,0.3)' } },
-        y: { position: 'right', ticks: { color: '#4a5568', font: { size: 9 }, callback: v => '$' + v.toLocaleString() }, grid: { color: 'rgba(31,41,55,0.3)' } }
-      }
-    }
+function load() {
+  fetch('/api/analysis').then(function(r){
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(d){
+    if (d.ok) { update(d); }
+    else { showErr(d.error||'Unknown error'); }
+  }).catch(function(e){
+    tried++;
+    if (tried < 5) { setTimeout(load, 2000); }
+    else { showErr(e.message); }
   });
 }
 
-async function load() {
-  try {
-    const r = await fetch('/api/analysis');
-    if (r.ok) { const d = await r.json(); if (d.ok) update(d); }
-  } catch(e) { console.error(e); }
+function showErr(msg) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('error').style.display = 'block';
+  document.getElementById('errMsg').textContent = msg;
 }
 
-load();
-setInterval(load, 15000);
+// Wait for DOM + Chart.js, then start
+function start() {
+  var wait = 0;
+  function check() {
+    if (typeof Chart !== 'undefined') {
+      load();
+      setInterval(load, 15000);
+    } else if (wait < 20) {
+      wait++;
+      setTimeout(check, 500);
+    } else {
+      console.warn('Chart.js not loaded, running without chart');
+      load();
+      setInterval(load, 15000);
+    }
+  }
+  check();
+}
+
+document.addEventListener('DOMContentLoaded', start);
+// Also try immediate if DOM already loaded
+if (document.readyState === 'interactive' || document.readyState === 'complete') start();
 </script>
 </body>
 </html>
