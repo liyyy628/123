@@ -423,18 +423,12 @@ def api_analysis():
 
 @app.route("/api/health")
 def api_health():
-    """Debug endpoint: show raw data status."""
-    raw = get_data()
-    tk = raw["ticker"]
+    """Health check — returns instantly for Railway monitoring."""
+    has_data = _cache is not None and _cache["ticker"].get("lastPrice", "0") != "0"
     return jsonify({
-        "price": tk.get("lastPrice"),
-        "ticker_ok": bool(tk.get("lastPrice")),
-        "klines_5m_count": len(raw["klines_5m"]),
-        "klines_15m_count": len(raw["klines_15m"]),
-        "klines_1h_count": len(raw["klines_1h"]),
-        "supports": raw["supports"],
-        "resistances": raw["resistances"],
-        "error": raw.get("error"),
+        "alive": True,
+        "has_data": has_data,
+        "price": _cache["ticker"].get("lastPrice") if _cache else None,
         "cache_age_ms": round((time.time() - _cache_ts) * 1000, 1) if _cache_ts else 0,
     })
 
