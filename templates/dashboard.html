@@ -106,31 +106,28 @@ body{font-family:'Inter',-apple-system,sans-serif;background:#06080b;color:#c8cc
 .chart-hd{font-size:10px;letter-spacing:3px;color:var(--t3);font-weight:600;margin-bottom:10px;text-transform:uppercase}
 .chart-cv{width:100%!important;height:260px!important}
 
-/* ── Overview ── */
-.ov{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--br);border-radius:12px;overflow:hidden;margin-bottom:12px}
-.ov-i{background:var(--bg2);padding:14px;text-align:center;transition:background 0.2s}.ov-i:hover{background:var(--bg3)}
-.ov-i .ov-v{font-size:16px;font-weight:700}.ov-i .ov-l{font-size:8px;color:var(--t2);margin-top:4px;text-transform:uppercase;letter-spacing:1.5px}
-.ov-r2{display:grid;grid-template-columns:repeat(4,1fr);gap:1px}.ov-r2 .ov-i{border-top:1px solid var(--br)}
-
-/* ── History ── */
-.hist{background:var(--bg2);border:1px solid var(--br);border-radius:14px;padding:14px;margin-bottom:0}
-.hist-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.hist-title{font-size:10px;letter-spacing:3px;color:var(--t3);font-weight:600;text-transform:uppercase}
-.hist-acc{font-size:12px;font-weight:600;color:var(--t2)}
-.hist-acc b{font-size:22px}
-.hist-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.hist-card{background:var(--bg3);border-radius:10px;padding:12px;text-align:center;transition:transform 0.2s}.hist-card:hover{transform:translateY(-2px)}
-.hist-time{font-size:9px;color:var(--t3);margin-bottom:6px}
-.hist-arrow{font-size:24px;line-height:1.2}
-.hist-dir{font-size:10px;color:var(--t2);margin-top:2px}
-.hist-score{font-size:11px;font-weight:700;margin-top:2px}
-.hist-result{margin-top:6px;border-radius:6px;padding:6px 0}
-.hist-result.win{background:rgba(0,220,166,0.06)}.hist-result.lose{background:rgba(255,71,87,0.06)}
-.hist-mark{font-size:22px;font-weight:800;line-height:1}
-.hist-mark.win{color:var(--g)}.hist-mark.lose{color:var(--r)}
-.hist-sub{font-size:9px;font-weight:600}.hist-sub.win{color:var(--g)}.hist-sub.lose{color:var(--r)}
-.hist-pct{font-size:10px;font-weight:600;margin-top:1px}.hist-pct.win{color:var(--g)}.hist-pct.lose{color:var(--r)}
-.hist-pending{color:var(--t3);font-size:9px;margin-top:6px}
+/* ── Bottom: Overview + History unified ── */
+.bot{background:var(--bg2);border:1px solid var(--br);border-radius:14px;overflow:hidden}
+.bot-top{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--br)}
+.bot-i{background:var(--bg2);padding:14px;text-align:center;transition:background 0.2s}.bot-i:hover{background:var(--bg3)}
+.bot-i .bv{font-size:16px;font-weight:700}.bot-i .bl{font-size:8px;color:var(--t2);margin-top:4px;text-transform:uppercase;letter-spacing:1.5px}
+.bot-r2{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--br)}.bot-r2 .bot-i{border-top:1px solid var(--br)}
+.bot-div{height:1px;background:var(--br);margin:0}
+.bot-hd{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 8px}
+.bot-title{font-size:10px;letter-spacing:3px;color:var(--t3);font-weight:600;text-transform:uppercase}
+.bot-acc{font-size:12px;font-weight:600;color:var(--t2)}.bot-acc b{font-size:22px}
+.bot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 16px 14px}
+.bot-card{background:var(--bg3);border-radius:10px;padding:12px;text-align:center;transition:transform 0.2s}.bot-card:hover{transform:translateY(-2px)}
+.bot-time{font-size:9px;color:var(--t3);margin-bottom:6px}
+.bot-arrow{font-size:24px;line-height:1.2}
+.bot-dir{font-size:10px;color:var(--t2);margin-top:2px}
+.bot-score{font-size:11px;font-weight:700;margin-top:2px}
+.bot-result{margin-top:6px;border-radius:6px;padding:6px 0}
+.bot-result.win{background:rgba(0,220,166,0.06)}.bot-result.lose{background:rgba(255,71,87,0.06)}
+.bot-mark{font-size:22px;font-weight:800;line-height:1}.bot-mark.win{color:var(--g)}.bot-mark.lose{color:var(--r)}
+.bot-sub{font-size:9px;font-weight:600}.bot-sub.win{color:var(--g)}.bot-sub.lose{color:var(--r)}
+.bot-pct{font-size:10px;font-weight:600;margin-top:1px}.bot-pct.win{color:var(--g)}.bot-pct.lose{color:var(--r)}
+.bot-pend{color:var(--t3);font-size:9px;margin-top:6px}
 
 /* ── Footer ── */
 .ft{text-align:center;padding:12px;color:var(--t3);font-size:8px;letter-spacing:2.5px;text-transform:uppercase}
@@ -141,7 +138,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:#06080b;color:#c8cc
 .load-ring{width:40px;height:40px;border:3px solid var(--br2);border-top-color:var(--y);border-radius:50%;animation:spin 0.8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .load-msg{font-size:10px;color:var(--t2);letter-spacing:2px;text-transform:uppercase}
 
-@media(max-width:900px){.cards,.charts,.hist-grid{grid-template-columns:1fr}.top{flex-wrap:wrap;height:auto;padding:14px 16px;gap:10px}.top-r{justify-content:flex-start;gap:16px}.card-body{flex-direction:column;text-align:center}.kg{grid-template-columns:repeat(2,1fr)}.ov,.ov-r2{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.cards,.charts,.bot-grid{grid-template-columns:1fr}.top{flex-wrap:wrap;height:auto;padding:14px 16px;gap:10px}.top-r{justify-content:flex-start;gap:16px}.card-body{flex-direction:column;text-align:center}.kg{grid-template-columns:repeat(2,1fr)}.bot-top,.bot-r2{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -217,16 +214,15 @@ body{font-family:'Inter',-apple-system,sans-serif;background:#06080b;color:#c8cc
     <div class="chart-box"><div class="chart-hd">实时价格曲线</div><canvas id="cLive" class="chart-cv"></canvas></div>
   </div>
 
-  <!-- Overview -->
-  <div class="ov" id="overview"></div>
-
-  <!-- History -->
-  <div class="hist">
-    <div class="hist-hd">
-      <div class="hist-title">预测历史</div>
-      <div class="hist-acc" id="accSum"></div>
+  <!-- Bottom: Overview + History merged -->
+  <div class="bot">
+    <div class="bot-top" id="overview"></div>
+    <div class="bot-div"></div>
+    <div class="bot-hd">
+      <span class="bot-title">预测历史</span>
+      <span class="bot-acc" id="accSum"></span>
     </div>
-    <div class="hist-grid" id="histGrid"></div>
+    <div class="bot-grid" id="histGrid"></div>
   </div>
 
 </div>
@@ -332,15 +328,15 @@ function update(d){
   // Overview
   var p5=d.pred_5m||{},p15=d.pred_15m||{};
   document.getElementById('overview').innerHTML=
-    '<div class="ov-i"><div class="ov-v">'+icon(p5.direction||'neutral')+' '+txt(p5.direction||'neutral')+'</div><div class="ov-l">5M 预测</div></div>'+
-    '<div class="ov-i"><div class="ov-v">'+icon(p15.direction||'neutral')+' '+txt(p15.direction||'neutral')+'</div><div class="ov-l">15M 预测</div></div>'+
-    '<div class="ov-i"><div class="ov-v">$'+Math.round(d.high24||0).toLocaleString()+'</div><div class="ov-l">24H 最高</div></div>'+
-    '<div class="ov-i"><div class="ov-v">$'+Math.round(d.low24||0).toLocaleString()+'</div><div class="ov-l">24H 最低</div></div>'+
-    '<div class="ov-r2">'+
-    '<div class="ov-i"><div class="ov-v">'+Math.round(d.vol24||0).toLocaleString()+'</div><div class="ov-l">成交量 BTC</div></div>'+
-    '<div class="ov-i"><div class="ov-v" style="color:'+(chg>=0?'var(--g)':'var(--r)')+'">'+(chg>=0?'+':'')+chg.toFixed(2)+'%</div><div class="ov-l">24H 涨跌幅</div></div>'+
-    '<div class="ov-i"><div class="ov-v">'+(p5.total_score>0?'+':'')+(p5.total_score||0)+'</div><div class="ov-l">5M 评分</div></div>'+
-    '<div class="ov-i"><div class="ov-v">'+(p15.total_score>0?'+':'')+(p15.total_score||0)+'</div><div class="ov-l">15M 评分</div></div>'+
+    '<div class="bot-i"><div class="bv">'+icon(p5.direction||'neutral')+' '+txt(p5.direction||'neutral')+'</div><div class="bl">5M 预测</div></div>'+
+    '<div class="bot-i"><div class="bv">'+icon(p15.direction||'neutral')+' '+txt(p15.direction||'neutral')+'</div><div class="bl">15M 预测</div></div>'+
+    '<div class="bot-i"><div class="bv">$'+Math.round(d.high24||0).toLocaleString()+'</div><div class="bl">24H 最高</div></div>'+
+    '<div class="bot-i"><div class="bv">$'+Math.round(d.low24||0).toLocaleString()+'</div><div class="bl">24H 最低</div></div>'+
+    '<div class="bot-r2">'+
+    '<div class="bot-i"><div class="bv">'+Math.round(d.vol24||0).toLocaleString()+'</div><div class="bl">成交量 BTC</div></div>'+
+    '<div class="bot-i"><div class="bv" style="color:'+(chg>=0?'var(--g)':'var(--r)')+'">'+(chg>=0?'+':'')+chg.toFixed(2)+'%</div><div class="bl">24H 涨跌幅</div></div>'+
+    '<div class="bot-i"><div class="bv">'+(p5.total_score>0?'+':'')+(p5.total_score||0)+'</div><div class="bl">5M 评分</div></div>'+
+    '<div class="bot-i"><div class="bv">'+(p15.total_score>0?'+':'')+(p15.total_score||0)+'</div><div class="bl">15M 评分</div></div>'+
     '</div>';
 }
 
@@ -404,17 +400,17 @@ function loadHistory(){
       var res='';
       if(p.evaluated){
         var c=p.correct,cls2=c?'win':'lose';
-        res='<div class="hist-result '+cls2+'">'+
-          '<div class="hist-mark '+cls2+'">'+(c?'✓':'✗')+'</div>'+
-          '<div class="hist-sub '+cls2+'">'+(c?'正确':'错误')+'</div>'+
-          '<div class="hist-pct '+cls2+'">'+(p.change_pct>0?'+':'')+(p.change_pct||0).toFixed(2)+'%</div>'+
+        res='<div class="bot-result '+cls2+'">'+
+          '<div class="bot-mark '+cls2+'">'+(c?'✓':'✗')+'</div>'+
+          '<div class="bot-sub '+cls2+'">'+(c?'正确':'错误')+'</div>'+
+          '<div class="bot-pct '+cls2+'">'+(p.change_pct>0?'+':'')+(p.change_pct||0).toFixed(2)+'%</div>'+
           '</div>';
-      }else{res='<div class="hist-pending">⏳</div>';}
-      h+='<div class="hist-card">'+
-        '<div class="hist-time">'+time+' · '+p.timeframe+'</div>'+
-        '<div class="hist-arrow" style="color:'+col+'">'+ic+'</div>'+
-        '<div class="hist-dir">'+txt(dir)+'</div>'+
-        '<div class="hist-score">'+(sc>0?'+':'')+sc+'</div>'+
+      }else{res='<div class="bot-pend">⏳</div>';}
+      h+='<div class="bot-card">'+
+        '<div class="bot-time">'+time+' · '+p.timeframe+'</div>'+
+        '<div class="bot-arrow" style="color:'+col+'">'+ic+'</div>'+
+        '<div class="bot-dir">'+txt(dir)+'</div>'+
+        '<div class="bot-score">'+(sc>0?'+':'')+sc+'</div>'+
         res+'</div>';
     });
     grid.innerHTML=h;
