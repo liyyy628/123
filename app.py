@@ -463,5 +463,19 @@ def api_stream():
                              "Connection": "keep-alive"})
 
 
+def warmup():
+    """Pre-fetch data on startup so first request doesn't block."""
+    try:
+        get_data()
+    except Exception:
+        pass
+
+
+# Pre-warm in background thread so gunicorn loads without delay
+_warmup_thread = threading.Thread(target=warmup, daemon=True)
+_warmup_thread.start()
+
+
 if __name__ == "__main__":
+    warmup()
     app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
