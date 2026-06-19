@@ -197,7 +197,10 @@ function update(d) {
     document.getElementById('a'+id).className = 'pa ' + dir;
     document.getElementById('l'+id).textContent = txt(dir);
     document.getElementById('l'+id).className = 'pl ' + dir;
-    document.getElementById('sc'+id).textContent = '评分: ' + (p.total_score>0?'+':'') + p.total_score;
+    var volLabel = p.volatility == 'high' ? '高波' : (p.volatility == 'low' ? '低波' : '');
+    var volColor = p.volatility == 'high' ? 'var(--r)' : (p.volatility == 'low' ? 'var(--t2)' : '');
+    var volStr = volLabel ? ' <span style=\"font-size:10px;color:'+volColor+'\">['+volLabel+']</span>' : '';
+    document.getElementById('sc'+id).innerHTML = '评分: ' + (p.total_score>0?'+':'') + p.total_score + volStr;
     document.getElementById('sc'+id).className = 'sc ' + dir;
     document.getElementById('conf'+id).textContent = p.confidence + '% 置信度';
     document.getElementById('bf'+id).style.width = p.confidence + '%';

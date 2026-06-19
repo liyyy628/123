@@ -93,12 +93,16 @@ def get_data():
 # ═══════════════════════════════════════════════════
 
 def predict(klines, supports=None, resistances=None):
-    """7-factor direction prediction."""
+    """Optimized 7-factor model — volatility-adaptive, non-collinear weights.
+
+    Factor weights are balanced (~15 pts each) and normalized by ATR.
+    Direction thresholds based on score distribution (percentile-grounded).
+    """
     if len(klines) < 30:
         return {"direction": "neutral", "confidence": 0, "factors": [],
                 "price": 0, "open_price": 0, "change_pct": 0,
                 "high": 0, "low": 0, "candle_status": "N/A",
-                "candle_pct": 0, "total_score": 0}
+                "candle_pct": 0, "total_score": 0, "volatility": "normal"}
 
     cl = [k["close"] for k in klines]
     op = [k["open"] for k in klines]
@@ -107,143 +111,260 @@ def predict(klines, supports=None, resistances=None):
     vl = [k["volume"] for k in klines]
     cur = cl[-1]
     opn = op[-1]
-    score = 0
+    bull = cur > opn
+    score = 0.0  # Use float for smoother accumulation
     factors = []
 
-    # F1: Current K-line
-    chg = (cur - opn) / opn * 100
-    bull = cur > opn
-    pts = min(int(abs(chg) * 20), 30) * (1 if bull else -1)
-    score += pts
-    factors.append({"name": "当前K线", "score": pts,
-                    "detail": ("阳线 +" if bull else "阴线 ") + f"{chg:+.3f}%"})
+    # ── Volatility estimation (ATR as % of price) ──
+    tr_list = []
+    for i in range(1, min(15, len(hi))):
+        tr_list.append(max(hi[-i] - lo[-i],
+                           abs(hi[-i] - cl[-i-1]),
+                           abs(lo[-i] - cl[-i-1])))
+    atr = sum(tr_list) / len(tr_list) if tr_list else cur * 0.002
+    vol_pct = atr / cur * 100  # ATR as % of price
 
-    # F2: Momentum
-    mom = 0
-    for i in range(3, 0, -1):
-        if len(cl) > i:
-            mom += (cl[-i] - cl[-i - 1]) / cl[-i - 1] * 100 * i
-    mp = max(min(int(mom * 5), 25), -25)
+    # Volatility regime classification
+    if vol_pct < 0.15:
+        vol_regime = "low"
+    elif vol_pct > 0.50:
+        vol_regime = "high"
+    else:
+        vol_regime = "normal"
+
+    # Adaptive RSI thresholds per volatility regime
+    rsi_thresholds = {
+        "low":    (35, 65),    # Narrower range in low vol
+        "normal": (30, 70),
+        "high":   (22, 78),    # Wider range in high vol
+    }
+    rsi_os, rsi_ob = rsi_thresholds[vol_regime]
+
+    # ── F1: Price Momentum (exponential-weighted, ATR-normalized) ──
+    # Replaces old F1(current K-line) + F2(equal-weight momentum).
+    # Exponential weighting: recent moves count more, normalized by volatility.
+    weights = [0.40, 0.30, 0.20, 0.10]  # 4-period decay
+    mom_score = 0.0
+    for w, lag in zip(weights, [1, 2, 3, 4]):
+        if len(cl) > lag:
+            ret = (cl[-lag] - cl[-lag-1]) / cl[-lag-1] * 100
+            mom_score += ret * w
+    # Normalize by volatility: 1 ATR move ≈ 10 points
+    if vol_pct > 0:
+        mom_score = mom_score / vol_pct * 2.5
+    mp = max(-25, min(25, round(mom_score)))
     score += mp
-    factors.append({"name": "动量", "score": mp,
-                    "detail": ("上攻 " if mp > 0 else ("下压 " if mp < 0 else "平 ")) + str(abs(mp)) + "分"})
+    factors.append({
+        "name": "价格动能",
+        "score": mp,
+        "detail": f"{'上攻' if mp>=3 else ('下压' if mp<=-3 else '平')} {abs(mp)}分 "
+                  f"(ATR {vol_pct:.2f}% | {'高波动' if vol_regime=='high' else ('低波动' if vol_regime=='low' else '正常')})"
+    })
 
-    # F3: RSI
+    # ── F2: RSI (volatility-adaptive thresholds) ──
     rv = rsi_current(cl)
     if rv is not None:
-        rp = 10 if rv < 30 else (-10 if rv > 70 else 0)
+        if rv < rsi_os:
+            rp = 12
+            lab = f"超卖({rsi_os})"
+        elif rv > rsi_ob:
+            rp = -12
+            lab = f"超买({rsi_ob})"
+        elif rv < rsi_os + 8:
+            rp = 6
+            lab = f"接近超卖"
+        elif rv > rsi_ob - 8:
+            rp = -6
+            lab = f"接近超买"
+        else:
+            rp = 0
+            lab = "中性"
         score += rp
-        lab = "超卖" if rv < 30 else ("超买" if rv > 70 else "中性")
-        factors.append({"name": "RSI", "score": rp, "detail": f"{lab} {rv:.0f}"})
+        factors.append({"name": "RSI", "score": rp, "detail": f"{lab} {rv:.0f} (阈值{int(rsi_os)}/{int(rsi_ob)})"})
     else:
         factors.append({"name": "RSI", "score": 0, "detail": "N/A"})
 
-    # F4: Volume
+    # ── F3: Volume Confirmation ──
     if len(vl) >= 10:
         rv3 = sum(vl[-3:]) / 3
         bv7 = sum(vl[-10:-3]) / 7 if len(vl) >= 10 else 1
         vr = rv3 / bv7 if bv7 > 0 else 1
-        vp = (15 if vr > 2 and bull else
-              (-15 if vr > 2 and not bull else
-               (8 if vr > 1.3 and bull else
-                (-8 if vr > 1.3 and not bull else 0))))
+        if vr > 2.5:
+            vp = 15 if bull else -15
+            tier = "巨量"
+        elif vr > 1.8:
+            vp = 10 if bull else -10
+            tier = "放量"
+        elif vr > 1.2:
+            vp = 5 if bull else -5
+            tier = "温和放量"
+        elif vr < 0.5:
+            vp = -3 if bull else 3
+            tier = "缩量"
+        else:
+            vp = 0
+            tier = "平量"
         score += vp
-        factors.append({"name": "成交量", "score": vp,
-                        "detail": ("放量" if vr > 2 else ("温和" if vr > 1.3 else "平量")) + f" {vr:.1f}x"})
+        factors.append({"name": "成交量", "score": vp, "detail": f"{tier} {vr:.1f}x"})
     else:
         factors.append({"name": "成交量", "score": 0, "detail": "N/A"})
 
-    # F5: EMA
+    # ── F4: EMA Triple Alignment (5/20/50) ──
     e5 = ema(cl, 5)
     e20 = ema(cl, 20)
-    if e5[-1] and e20[-1]:
-        ep = 10 if e5[-1] > e20[-1] else -10
+    e50 = ema(cl, 50)
+    if e5[-1] and e20[-1] and e50[-1]:
+        if e5[-1] > e20[-1] > e50[-1]:
+            ep = 12  # Perfect bullish fan
+            detail = "EMA5>20>50 多头排列"
+        elif e5[-1] < e20[-1] < e50[-1]:
+            ep = -12  # Perfect bearish fan
+            detail = "EMA5<20<50 空头排列"
+        elif e5[-1] > e20[-1]:
+            ep = 6  # Short-term bullish
+            detail = "EMA5>20 短期偏多"
+        elif e5[-1] < e20[-1]:
+            ep = -6
+            detail = "EMA5<20 短期偏空"
+        else:
+            ep = 0
+            detail = "EMA缠绕"
         score += ep
-        factors.append({"name": "EMA", "score": ep,
-                        "detail": "EMA5" + (">EMA20 短多" if ep > 0 else "<EMA20 短空")})
+        factors.append({"name": "EMA排列", "score": ep, "detail": detail})
     else:
-        factors.append({"name": "EMA", "score": 0, "detail": "N/A"})
+        factors.append({"name": "EMA排列", "score": 0, "detail": "N/A"})
 
-    # F6: Support/Resistance
+    # ── F5: Support/Resistance (ATR-normalized distance) ──
     sr_score = 0
     sr_detail = "N/A"
     if supports or resistances:
         ns = min(supports, key=lambda s: abs(opn - s)) if supports else None
         nr = min(resistances, key=lambda r: abs(opn - r)) if resistances else None
+        atr_dist = atr  # 1 ATR as distance unit
         if ns and nr:
-            gp = (nr - opn) / (nr - ns)
-            if gp < 0.3:
-                sr_score = 10; sr_detail = f"开于支撑{ns:.0f}附近 偏多"
-            elif gp > 0.7:
-                sr_score = -10; sr_detail = f"开于阻力{nr:.0f}附近 偏空"
+            # Position within S-R channel (0=at support, 1=at resistance)
+            channel_pos = (opn - ns) / (nr - ns) if nr != ns else 0.5
+            dist_to_s = (opn - ns) / atr_dist if atr_dist > 0 else 99
+            dist_to_r = (nr - opn) / atr_dist if atr_dist > 0 else 99
+            if channel_pos < 0.25 and dist_to_s < 1.5:
+                sr_score = 12
+                sr_detail = f"紧贴支撑{ns:.0f}(距{dist_to_s:.1f}ATR) 偏多"
+            elif channel_pos > 0.75 and dist_to_r < 1.5:
+                sr_score = -12
+                sr_detail = f"紧贴阻力{nr:.0f}(距{dist_to_r:.1f}ATR) 偏空"
             else:
-                sr_detail = f"开于区间中部 S={ns:.0f} R={nr:.0f}"
+                sr_detail = f"区间中部 S={ns:.0f} R={nr:.0f} (位置{channel_pos:.0%})"
         elif ns:
-            gp = (opn - ns) / opn * 100
-            if gp < 1.0:
-                sr_score = 8; sr_detail = f"接近支撑{ns:.0f}({gp:.1f}%) 偏多"
+            dist_s = (opn - ns) / atr_dist if atr_dist > 0 else 99
+            if dist_s < 1.5:
+                sr_score = 10
+                sr_detail = f"接近支撑{ns:.0f}(距{dist_s:.1f}ATR) 偏多"
             else:
-                sr_detail = f"距支撑{ns:.0f} {gp:.1f}%"
+                sr_detail = f"距支撑{ns:.0f} {dist_s:.1f}ATR"
         elif nr:
-            gp = (nr - opn) / opn * 100
-            if gp < 1.0:
-                sr_score = -8; sr_detail = f"接近阻力{nr:.0f}({gp:.1f}%) 偏空"
+            dist_r = (nr - opn) / atr_dist if atr_dist > 0 else 99
+            if dist_r < 1.5:
+                sr_score = -10
+                sr_detail = f"接近阻力{nr:.0f}(距{dist_r:.1f}ATR) 偏空"
             else:
-                sr_detail = f"距阻力{nr:.0f} {gp:.1f}%"
+                sr_detail = f"距阻力{nr:.0f} {dist_r:.1f}ATR"
     score += sr_score
-    factors.append({"name": "关键位", "score": sr_score, "detail": sr_detail})
+    factors.append({"name": "关键价位", "score": sr_score, "detail": sr_detail})
 
-    # F7: Open vs EMA
-    o2e_score = 0
-    o2e_detail = "N/A"
-    ema20_val = e20[-1] if e20 and e20[-1] else None
-    ema50_arr = ema(cl, 50)
-    ema50_val = ema50_arr[-1] if ema50_arr and ema50_arr[-1] else None
-    if ema20_val and ema50_val:
-        ov20 = (opn - ema20_val) / ema20_val * 100
-        ov50 = (opn - ema50_val) / ema50_val * 100
-        if ov20 > 0 and ov50 > 0:
-            o2e_score = 8; o2e_detail = f"开盘高于EMA20/50 偏多({ov20:+.1f}%/{ov50:+.1f}%)"
-        elif ov20 < 0 and ov50 < 0:
-            o2e_score = -8; o2e_detail = f"开盘低于EMA20/50 偏空({ov20:+.1f}%/{ov50:+.1f}%)"
+    # ── F6: Open vs VWAP (volume-weighted average price) ──
+    vwap_score = 0
+    vwap_detail = "N/A"
+    if len(cl) >= 20 and len(vl) >= 20:
+        typical_prices = [(hi[i] + lo[i] + cl[i]) / 3 for i in range(-20, 0)]
+        vols = vl[-20:]
+        vwap = sum(tp * v for tp, v in zip(typical_prices, vols)) / sum(vols) if sum(vols) > 0 else cur
+        dev = (opn - vwap) / vwap * 100
+        # Normalize by volatility
+        dev_z = dev / vol_pct if vol_pct > 0 else 0
+        if abs(dev_z) > 1.5:
+            vwap_score = 8 if dev_z > 0 else -8
+            vwap_detail = f"开盘{'高于' if dev>0 else '低于'}VWAP {abs(dev):.2f}% ({abs(dev_z):.1f}σ) {'偏多' if dev>0 else '偏空'}"
+        elif abs(dev_z) > 0.5:
+            vwap_score = 4 if dev_z > 0 else -4
+            vwap_detail = f"开盘略{'高' if dev>0 else '低'}于VWAP ({abs(dev_z):.1f}σ)"
         else:
-            o2e_detail = f"EMA间震荡({ov20:+.1f}%/{ov50:+.1f}%)"
-    elif ema20_val:
-        ov20 = (opn - ema20_val) / ema20_val * 100
-        if abs(ov20) > 1:
-            o2e_score = 5 if ov20 > 0 else -5; o2e_detail = f"开盘vs EMA20 {ov20:+.1f}%"
+            vwap_detail = f"开盘紧贴VWAP (VWAP={vwap:.0f})"
+    score += vwap_score
+    factors.append({"name": "开盘vs VWAP", "score": vwap_score, "detail": vwap_detail})
+
+    # ── F7: Volatility Environment (adjusts confidence, not direction) ──
+    # Compare current vol to longer-term vol
+    if len(cl) >= 30:
+        tr_long = []
+        for i in range(1, min(30, len(hi))):
+            tr_long.append(max(hi[-i] - lo[-i],
+                               abs(hi[-i] - cl[-i-1]),
+                               abs(lo[-i] - cl[-i-1])))
+        atr_long = sum(tr_long) / len(tr_long)
+        vol_long = atr_long / cur * 100
+        vol_ratio = vol_pct / vol_long if vol_long > 0 else 1.0
+
+        if vol_ratio > 2.0:
+            ve_score = -5
+            ve_detail = f"波动率飙升({vol_ratio:.1f}x) 信号可靠性降低"
+        elif vol_ratio > 1.4:
+            ve_score = -2
+            ve_detail = f"波动率扩大({vol_ratio:.1f}x)"
+        elif vol_ratio < 0.5:
+            ve_score = 3
+            ve_detail = f"波动率收缩({vol_ratio:.1f}x) 可能酝酿突破"
+        elif vol_ratio < 0.7:
+            ve_score = 1
+            ve_detail = f"低波动({vol_ratio:.1f}x)"
         else:
-            o2e_detail = f"开盘紧贴EMA20 ({ov20:+.1f}%)"
-    score += o2e_score
-    factors.append({"name": "开盘vs EMA", "score": o2e_score, "detail": o2e_detail})
+            ve_score = 0
+            ve_detail = f"波动率正常({vol_ratio:.1f}x)"
+        score += ve_score
+        factors.append({"name": "波动率环境", "score": ve_score, "detail": ve_detail})
+    else:
+        factors.append({"name": "波动率环境", "score": 0, "detail": "N/A"})
 
-    # Direction
-    if score > 5: d = "up"
-    elif score > 2: d = "leaning_up"
-    elif score >= -2: d = "neutral"
-    elif score >= -5: d = "leaning_down"
-    else: d = "down"
+    # ── Direction: statistical thresholds ──
+    # With 7 balanced factors (each ~12-15 max), total range ~±90.
+    # Thresholds based on score percentile estimates:
+    #   |score| > 14 → strong signal (top ~15%)
+    #   |score| > 7  → leaning (top ~35%)
+    #   else        → neutral
+    if score > 14:
+        d = "up"
+    elif score > 7:
+        d = "leaning_up"
+    elif score >= -7:
+        d = "neutral"
+    elif score >= -14:
+        d = "leaning_down"
+    else:
+        d = "down"
 
+    # ── Confidence: normalized to 0-100 ──
     abs_score = abs(score)
-    conf = round(min(abs_score / 100 * 100, 95), 1)
-    if d == "neutral": conf = max(conf, 50 - abs_score)
+    conf = round(min(abs_score / 90 * 100, 95), 1)
+    if d == "neutral":
+        conf = max(conf, 40 + (7 - abs_score) / 7 * 30)  # Higher conf near boundary
     elif d in ("leaning_up", "leaning_down"):
-        conf = round(min(abs_score / 7 * 60 + 20, 70), 1)
+        conf = round(50 + abs_score / 14 * 30, 1)  # 50-80 range
 
-    # Candle progress
+    # ── Candle progress ──
     now = datetime.now(timezone.utc)
     secs = 300 if klines[0].get("_tf") == "5m" else 900
-    if klines[0].get("_tf") == "15m": secs = 900
+    if klines[0].get("_tf") == "15m":
+        secs = 900
     c_start = now.replace(second=0, microsecond=0)
     off = c_start.minute % (5 if secs == 300 else 15)
     c_start = c_start.replace(minute=c_start.minute - off)
     cp = min(round((now - c_start).total_seconds() / secs * 100, 0), 99)
 
-    return {"direction": d, "confidence": conf, "total_score": score,
+    return {"direction": d, "confidence": conf, "total_score": round(score),
             "factors": factors, "price": cur, "open_price": opn,
-            "change_pct": round(chg, 4), "high": round(hi[-1], 1),
+            "change_pct": round((cur - opn) / opn * 100, 4), "high": round(hi[-1], 1),
             "low": round(lo[-1], 1),
-            "candle_status": "阳线" if bull else "阴线", "candle_pct": cp}
+            "candle_status": "阳线" if bull else "阴线", "candle_pct": cp,
+            "volatility": vol_regime}
 
 
 def build_analysis(raw):

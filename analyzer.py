@@ -115,24 +115,39 @@ class BTCAnalyzer:
         else:
             result["signals"].append({"name": "MACD", "found": False, "detail": f"MACD={m_curr:.0f}, Signal={s_curr:.0f}, Hist={h_curr:.0f}"})
         result["total_checked"] += 1
-        # c) RSI
+        # c) RSI (volatility-adaptive thresholds)
         rsi_val = ind.rsi_current(closes)
+        # Calculate ATR for adaptive thresholds
+        tr_vals = []
+        for i in range(1, min(15, len(highs))):
+            tr_vals.append(max(highs[-i] - lows[-i],
+                               abs(highs[-i] - closes[-i-1]),
+                               abs(lows[-i] - closes[-i-1])))
+        atr_val_15m = sum(tr_vals) / len(tr_vals) if tr_vals else 0
+        vol_pct_15m = atr_val_15m / closes[-1] * 100 if closes[-1] > 0 else 0
+        if vol_pct_15m < 0.15:
+            rsi_os, rsi_ob = 35, 65
+        elif vol_pct_15m > 0.50:
+            rsi_os, rsi_ob = 22, 78
+        else:
+            rsi_os, rsi_ob = RSI_OVERSOLD, RSI_OVERBOUGHT
+
         rsi_signal = False
         rsi_detail = f"RSI={rsi_val:.1f}" if rsi_val else "RSI=N/A"
         if rsi_val is not None:
-            if rsi_val < RSI_OVERSOLD:
+            if rsi_val < rsi_os:
                 rsi_signal = True
-                rsi_detail += " 超卖区拐头 ✓"
-            elif rsi_val > RSI_OVERBOUGHT:
+                rsi_detail += f" 超卖区拐头 ✓(阈{rsi_os})"
+            elif rsi_val > rsi_ob:
                 rsi_signal = True
-                rsi_detail += " 超买区拐头 ✓"
+                rsi_detail += f" 超买区拐头 ✓(阈{rsi_ob})"
             rsi_vals = ind.rsi(closes)
             if len(rsi_vals) >= 3 and all(v is not None for v in rsi_vals[-3:]):
                 p2, p1, cur = rsi_vals[-3], rsi_vals[-2], rsi_val
-                if p2 > p1 and p1 < cur and cur < RSI_OVERSOLD + 10:
+                if p2 > p1 and p1 < cur and cur < rsi_os + 10:
                     rsi_signal = True
                     rsi_detail += " (RSI底背离反弹 ✓)"
-                elif p2 < p1 and p1 > cur and cur > RSI_OVERBOUGHT - 10:
+                elif p2 < p1 and p1 > cur and cur > rsi_ob - 10:
                     rsi_signal = True
                     rsi_detail += " (RSI顶背离回落 ✓)"
         if rsi_signal:
