@@ -979,7 +979,7 @@ function cardHtml(tf,tfk,p){
   var vlCls=vl==='high'?'high':vl==='low'?'low':'medium';
   var cf=Math.min(p.confidence||0,100);var sc=p.total_score||0;
   var cl=p.candle_status||'N/A';var cp=p.candle_pct||0;
-  var cpTxt=cp!==0?(cp>0?'+':'')+cp.toFixed(2)+'%':'N/A';
+  var cpTxt=cp!==0?(cp>0?'+':'')+cp.toFixed(1)+'%':'N/A';
   var r=16.5;var circ=2*Math.PI*r;var offset=circ-(cf/100)*circ;
   var vlTxt=vl==='high'?'高波动':vl==='low'?'低波动':vl==='medium'?'中波动':vl.toUpperCase();
 
