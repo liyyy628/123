@@ -229,8 +229,8 @@ body::after{
 .topbar-stat .value.glow-green{text-shadow:0 0 12px rgba(0,230,160,0.3)}
 .topbar-stat .value.glow-red{text-shadow:0 0 12px rgba(255,77,106,0.3)}
 .topbar-stat .label{
-  font-size:8px;color:var(--text-tertiary);text-transform:uppercase;
-  letter-spacing:2px;margin-top:3px;font-weight:600;
+  font-size:10px;color:var(--text-tertiary);
+  letter-spacing:1px;margin-top:3px;font-weight:600;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -283,8 +283,8 @@ body::after{
   margin-bottom:16px;margin-top:8px;
 }
 .section-title{
-  font-size:11px;font-weight:700;color:var(--text-tertiary);
-  text-transform:uppercase;letter-spacing:3px;
+  font-size:12px;font-weight:700;color:var(--text-tertiary);
+  letter-spacing:2px;
   display:flex;align-items:center;gap:10px;
 }
 .section-title::before{
@@ -394,8 +394,8 @@ body::after{
   display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;
 }
 .card-timeframe{
-  font-size:10px;letter-spacing:3px;color:var(--text-tertiary);
-  font-weight:700;text-transform:uppercase;
+  font-size:12px;letter-spacing:1px;color:var(--text-tertiary);
+  font-weight:700;
 }
 .card-volatility{
   font-size:9px;padding:4px 12px;border-radius:20px;font-weight:700;letter-spacing:0.5px;
@@ -496,7 +496,7 @@ body::after{
   padding-top:14px;border-top:1px solid var(--border-subtle);
   font-size:11px;color:var(--text-secondary);
 }
-.card-candle .label{color:var(--text-tertiary);font-size:9px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.card-candle .label{color:var(--text-tertiary);font-size:10px;letter-spacing:0.5px;font-weight:600}
 .card-candle .value{font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums}
 .card-candle .divider{width:3px;height:3px;border-radius:50%;background:var(--text-muted)}
 
@@ -532,8 +532,8 @@ body::after{
 .metric-value .down{color:var(--red-bright);text-shadow:0 0 14px rgba(255,77,106,0.3)}
 .metric-value .neutral{color:var(--gold-bright);text-shadow:0 0 14px rgba(245,184,66,0.2)}
 .metric-label{
-  font-size:8px;color:var(--text-tertiary);text-transform:uppercase;
-  letter-spacing:2px;font-weight:600;
+  font-size:10px;color:var(--text-tertiary);
+  letter-spacing:1px;font-weight:600;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -550,7 +550,7 @@ body::after{
 }
 .chart-card:hover{border-color:var(--border-glow);box-shadow:var(--shadow-md)}
 .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.chart-title{font-size:10px;letter-spacing:3px;color:var(--text-tertiary);font-weight:700;text-transform:uppercase}
+.chart-title{font-size:12px;letter-spacing:1px;color:var(--text-tertiary);font-weight:700}
 .chart-indicator{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text-tertiary);font-weight:600}
 .chart-indicator .dot{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:0 0 8px currentColor}
 .chart-canvas-wrap{position:relative;height:280px}
@@ -570,7 +570,7 @@ body::after{
 }
 .panel:hover{border-color:var(--border-glow);box-shadow:var(--shadow-md)}
 .panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-.panel-title{font-size:10px;letter-spacing:3px;color:var(--text-tertiary);font-weight:700;text-transform:uppercase}
+.panel-title{font-size:12px;letter-spacing:1px;color:var(--text-tertiary);font-weight:700}
 .panel-badge{
   font-size:10px;font-weight:600;color:var(--text-secondary);
   padding:3px 10px;border-radius:12px;background:rgba(255,255,255,0.03);
@@ -607,7 +607,7 @@ body::after{
 .pred-result .mark{font-size:16px;font-weight:700}
 .pred-result .mark.win{color:var(--green);filter:drop-shadow(0 0 6px rgba(0,230,160,0.4))}
 .pred-result .mark.lose{color:var(--red)}
-.pred-result .sub{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px}
+.pred-result .sub{font-size:10px;font-weight:700;letter-spacing:0.5px}
 .pred-result .sub.win{color:var(--green)}.pred-result .sub.lose{color:var(--red)}
 .pred-result .pct{font-size:10px;font-weight:700}
 .pred-result .pct.win{color:var(--green)}.pred-result .pct.lose{color:var(--red)}
@@ -738,7 +738,7 @@ body::after{
   <div class="topbar-inner">
     <div class="topbar-left">
       <div class="topbar-logo">&#x20BF;</div>
-      <div class="topbar-title">BTC Assistant <span>v2</span></div>
+      <div class="topbar-title">BTC 交易助手 <span>v2</span></div>
     </div>
     <div class="topbar-center">
       <div class="topbar-price-wrap">
@@ -747,9 +747,9 @@ body::after{
       <div class="topbar-change" id="chg24">--</div>
     </div>
     <div class="topbar-right">
-      <div class="topbar-stat"><div class="value" id="high24">--</div><div class="label">24H High</div></div>
-      <div class="topbar-stat"><div class="value" id="low24">--</div><div class="label">24H Low</div></div>
-      <div class="topbar-stat"><div class="value" id="vol24">--</div><div class="label">24H Vol</div></div>
+      <div class="topbar-stat"><div class="value" id="high24">--</div><div class="label">24H 最高</div></div>
+      <div class="topbar-stat"><div class="value" id="low24">--</div><div class="label">24H 最低</div></div>
+      <div class="topbar-stat"><div class="value" id="vol24">--</div><div class="label">24H 成交量</div></div>
     </div>
   </div>
 </header>
@@ -762,7 +762,7 @@ body::after{
     <span class="status-dot" id="statusDot"></span>
     <span class="status-ring" id="statusRing"></span>
   </div>
-  <span id="statusTxt">CONNECTING...</span>
+  <span id="statusTxt">连接中...</span>
 </div>
 
 <!-- ═══════════════════════════════════════════════════
@@ -772,34 +772,34 @@ body::after{
 
   <!-- Signal Predictions -->
   <div class="section-header">
-    <div class="section-title">Signal Predictions</div>
+    <div class="section-title">交易信号预测</div>
     <div class="section-badge">实时信号</div>
   </div>
   <div class="cards-grid" id="cardsContainer"></div>
 
   <!-- Market Metrics -->
   <div class="section-header">
-    <div class="section-title">Market Metrics</div>
+    <div class="section-title">市场技术指标</div>
     <div class="section-badge">技术指标</div>
   </div>
   <div class="metrics-row" id="statsContainer"></div>
 
   <!-- Charts -->
   <div class="section-header">
-    <div class="section-title">Price Charts</div>
+    <div class="section-title">实时价格图表</div>
     <div class="section-badge">实时更新</div>
   </div>
   <div class="charts-row">
     <div class="chart-card">
       <div class="chart-header">
-        <span class="chart-title">Trend</span>
-        <span class="chart-indicator"><span class="dot" style="background:var(--gold);color:var(--gold)"></span> 5M</span>
+        <span class="chart-title">趋势图</span>
+        <span class="chart-indicator"><span class="dot" style="background:var(--gold);color:var(--gold)"></span> 5分钟</span>
       </div>
       <div class="chart-canvas-wrap"><canvas id="cTrend"></canvas></div>
     </div>
     <div class="chart-card">
       <div class="chart-header">
-        <span class="chart-title">Live Track</span>
+        <span class="chart-title">实时追踪</span>
         <span class="chart-indicator"><span class="dot" style="background:var(--blue);color:var(--blue)"></span> 实时</span>
       </div>
       <div class="chart-canvas-wrap"><canvas id="cLive"></canvas></div>
@@ -810,14 +810,14 @@ body::after{
   <div class="bottom-row">
     <div class="panel">
       <div class="panel-header">
-        <span class="panel-title">Recent Predictions</span>
+        <span class="panel-title">近期预测记录</span>
         <span class="panel-badge" id="accSum"></span>
       </div>
       <div class="pred-grid" id="histGrid"></div>
     </div>
     <div class="panel">
       <div class="panel-header">
-        <span class="panel-title">Signal Factors</span>
+        <span class="panel-title">信号因子分析</span>
         <span class="panel-badge" id="tfIndicator">5M</span>
       </div>
       <div class="factors-list" id="factorsContainer"></div>
@@ -896,9 +896,9 @@ function icon(d){
   return '◆';
 }
 function txt(d){
-  if(d==='up')return 'STRONG BUY';if(d==='down')return 'STRONG SELL';
-  if(d==='leaning_up')return 'BUY';if(d==='leaning_down')return 'SELL';
-  return 'NEUTRAL';
+  if(d==='up')return '强烈看多';if(d==='down')return '强烈看空';
+  if(d==='leaning_up')return '偏多';if(d==='leaning_down')return '偏空';
+  return '中性';
 }
 function volTxt(v){var b=v/1000;if(b>=1000)return (b/1000).toFixed(1)+'M';return b.toFixed(0)+'K';}
 function rsiClass(v){if(v===null||v===undefined)return'';return v>70?'down':v<30?'up':'neutral';}
@@ -956,10 +956,10 @@ function update(d){
   var st=document.getElementById('statusTxt');
   if(d.error){
     sd.className='status-dot dead';sr.style.display='none';
-    st.textContent='ERROR: '+d.error;
+    st.textContent='错误: '+d.error;
   }else{
     sd.className='status-dot live';sr.style.display='block';
-    st.textContent='LIVE · '+(d.ts||'').slice(0,19).replace('T',' ');
+    st.textContent='实时 · '+(d.ts||'').slice(0,19).replace('T',' ');
   }
 
   renderCards(d);renderStats(d);drawTrend(d.chart);drawLive(d.chart);renderFactors(d);
@@ -970,7 +970,7 @@ function update(d){
    ──────────────────────────────────────────────── */
 function renderCards(d){
   var p5=d.pred_5m||{},p15=d.pred_15m||{};
-  var h=cardHtml('5 Minutes','5m',p5)+cardHtml('15 Minutes','15m',p15);
+  var h=cardHtml('5分钟','5m',p5)+cardHtml('15分钟','15m',p15);
   document.getElementById('cardsContainer').innerHTML=h;
 }
 function cardHtml(tf,tfk,p){
@@ -981,21 +981,21 @@ function cardHtml(tf,tfk,p){
   var cl=p.candle_status||'N/A';var cp=p.candle_pct||0;
   var cpTxt=cp!==0?(cp>0?'+':'')+cp.toFixed(2)+'%':'N/A';
   var r=16.5;var circ=2*Math.PI*r;var offset=circ-(cf/100)*circ;
-  var vlTxt=vl==='high'?'HIGH':vl==='low'?'LOW':vl==='medium'?'MEDIUM':vl.toUpperCase();
+  var vlTxt=vl==='high'?'高波动':vl==='low'?'低波动':vl==='medium'?'中波动':vl.toUpperCase();
 
   return '<div class="card '+dir+'" id="card'+tfk+'">'+
-    '<div class="card-header"><span class="card-timeframe">'+tf+'</span><span class="card-volatility '+vlCls+'">'+vlTxt+' VOL</span></div>'+
+    '<div class="card-header"><span class="card-timeframe">'+tf+'</span><span class="card-volatility '+vlCls+'">'+vlTxt+'</span></div>'+
     '<div class="card-body">'+
     '<div class="card-icon-wrap"><div class="card-icon-ring"></div><div class="card-icon '+dir+'">'+ic+'</div></div>'+
     '<div class="card-info">'+
     '<div class="card-direction '+dir+'">'+txt(dir)+'</div>'+
-    '<div class="card-score">Score <b>'+(sc>0?'+':'')+sc+'</b></div>'+
+    '<div class="card-score">评分 <b>'+(sc>0?'+':'')+sc+'</b></div>'+
     '<div class="card-confidence"><div class="confidence-ring">'+
     '<svg viewBox="0 0 48 48"><circle class="bg" cx="24" cy="24" r="'+r+'"/>'+
     '<circle class="fg '+dir+'" cx="24" cy="24" r="'+r+'" stroke-dasharray="'+circ+'" stroke-dashoffset="'+offset+'"/></svg>'+
     '<span class="confidence-val '+dir+'">'+cf+'%</span></div></div></div></div>'+
-    '<div class="card-candle"><span class="label">Candle</span><span class="value">'+cl+'</span>'+
-    '<span class="divider"></span><span class="label">Change</span><span class="value">'+cpTxt+'</span></div></div>';
+    '<div class="card-candle"><span class="label">K线</span><span class="value">'+cl+'</span>'+
+    '<span class="divider"></span><span class="label">涨跌</span><span class="value">'+cpTxt+'</span></div></div>';
 }
 
 /* ────────────────────────────────────────────────
@@ -1010,10 +1010,10 @@ function renderStats(d){
   var h='';
   h+=statBox('RSI',rsi!==null?rsi.toFixed(1):'--',rsiClass(rsi));
   h+=statBox('MACD',macd!==null?macd.toFixed(1):'--',macdClass(macd));
-  h+=statBox('VOLUME',vol!==null?volTxt(vol):'--','');
-  h+=statBox('SENTIMENT',p5.direction?txt(p5.direction):'--',p5.direction||'');
-  h+=statBox('PRED.MARKET',pmDir!=='neutral'?txt(pmDir):'HOLD',pmDir);
-  h+=statBox('CONFIDENCE',p5.confidence?p5.confidence+'%':'--',p5.direction||'');
+  h+=statBox('成交量',vol!==null?volTxt(vol):'--','');
+  h+=statBox('市场情绪',p5.direction?txt(p5.direction):'--',p5.direction||'');
+  h+=statBox('预测市场',pmDir!=='neutral'?txt(pmDir):'观望',pmDir);
+  h+=statBox('置信度',p5.confidence?p5.confidence+'%':'--',p5.direction||'');
   document.getElementById('statsContainer').innerHTML=h;
 }
 function statBox(l,v,c){
@@ -1133,7 +1133,7 @@ function loadHistory(){
     var sum=document.getElementById('accSum');
     if(acc!==null){
       var c2=acc>=70?'var(--green)':acc>=50?'var(--gold)':'var(--red)';
-      sum.innerHTML='Accuracy <b style="color:'+c2+'">'+acc+'%</b> &nbsp;'+ok+'/'+ev.length;
+      sum.innerHTML='准确率 <b style="color:'+c2+'">'+acc+'%</b> &nbsp;'+ok+'/'+ev.length;
     }else if(!ev.length&&items.length){
       sum.innerHTML='<span style="color:var(--text-tertiary)">等待验证...</span>';
     }else{sum.innerHTML='';}
@@ -1158,7 +1158,7 @@ function loadHistory(){
    ──────────────────────────────────────────────── */
 function renderFactors(d){
   var p=d.pred_5m||{};var factors=p.factors||[];var dir=p.direction||'neutral';
-  document.getElementById('tfIndicator').textContent=p.total_score!==undefined?'Score: '+(p.total_score>0?'+':'')+p.total_score:'5M';
+  document.getElementById('tfIndicator').textContent=p.total_score!==undefined?'评分: '+(p.total_score>0?'+':'')+p.total_score:'5分钟';
   var h='';
   if(!factors.length){h='<div class="no-data">等待因子数据...</div>';}
   else{
