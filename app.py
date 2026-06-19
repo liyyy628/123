@@ -14,6 +14,8 @@ from flask import Flask, render_template, jsonify, Response
 
 import data as d
 from indicators import ema, rsi_current, find_support_resistance
+from prediction_log import log_prediction, get_stats as log_stats
+from prediction_market import get_prediction_market_signal
 
 app = Flask(__name__)
 import logging
@@ -387,6 +389,15 @@ def build_analysis(raw):
     pred_5m = predict(k5, supports, resistances) if k5 else None
     pred_15m = predict(k15, supports, resistances) if k15 else None
 
+    # Log predictions for backtesting
+    if pred_5m and price > 0:
+        log_prediction("5m", pred_5m, price, pred_5m.get("open_price", 0))
+    if pred_15m and price > 0:
+        log_prediction("15m", pred_15m, price, pred_15m.get("open_price", 0))
+
+    # Fetch prediction market data (Binance Prediction Markets)
+    pred_market = get_prediction_market_signal()
+
     return {
         "ok": bool(price > 0),
         "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
@@ -401,6 +412,7 @@ def build_analysis(raw):
                                   "high": 0, "low": 0, "candle_status": "N/A",
                                   "candle_pct": 0, "total_score": 0},
         "chart": chart,
+        "pred_market": pred_market,
         "error": raw.get("error"),
     }
 
@@ -431,6 +443,20 @@ def api_health():
         "price": _cache["ticker"].get("lastPrice") if _cache else None,
         "cache_age_ms": round((time.time() - _cache_ts) * 1000, 1) if _cache_ts else 0,
     })
+
+
+@app.route("/api/stats")
+def api_stats():
+    """Prediction log statistics."""
+    return jsonify(log_stats())
+
+
+@app.route("/api/backtest")
+def api_backtest():
+    """Run prediction accuracy backtest."""
+    from prediction_backtest import run_backtest
+    days = int(__import__('flask').request.args.get('days', 7))
+    return jsonify(run_backtest(days))
 
 
 @app.route("/api/stream")

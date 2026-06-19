@@ -195,7 +195,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:#0a0b0f;color:#e4e6ea;
 </div>
 
 <div class="loading" id="loading"><div class="loading-ring"></div><div class="loading-text">加载中...</div></div>
-<div class="ft">BTC/USDT Terminal · 7因子自适应模型 · VWAP · ATR归一化</div>
+<div class="ft" id="ftText">BTC/USDT Terminal · 7因子自适应模型 · VWAP · ATR归一化 · <span id="pmInfo"></span></div>
 
 <script>
 var cT=null,cL=null,lastDir={5:'',15:''},prevFactors={5:{},15:{}};
@@ -292,6 +292,13 @@ function update(d){
   if(typeof Chart!=='undefined'){
     var ch=d.chart||[];
     updateTrend(ch);updateLive(ch);
+  }
+
+  // Prediction market info
+  var pm=d.pred_market||{};
+  if(pm.available && pm.consensus_direction!=='neutral'){
+    document.getElementById('pmInfo').textContent='预测市场: '+(pm.consensus_direction==='bullish'?'偏多':'偏空')+' (看涨'+(pm.bullish_probability*100).toFixed(0)+'%)';
+    document.getElementById('pmInfo').style.color=pm.consensus_direction==='bullish'?'var(--g)':'var(--r)';
   }
 
   // Overview
