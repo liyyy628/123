@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from flask import Flask, render_template, jsonify, Response
 
 import data as d
-from indicators import ema, rsi_current, find_support_resistance
+from indicators import ema, rsi_current, find_support_resistance, rsi, macd
 from prediction_log import log_prediction, get_stats as log_stats
 from prediction_market import get_prediction_market_signal
 
@@ -383,8 +383,21 @@ def build_analysis(raw):
     l24 = float(ticker.get("lowPrice", 0) or 0)
     v24 = float(ticker.get("volume", 0) or 0)
 
-    chart = [{"t": k["time"], "o": k["open"], "h": k["high"],
-              "l": k["low"], "c": k["close"]} for k in k15[-40:]] if k15 else []
+    # Build chart with indicators (RSI, MACD, volume) for frontend metrics
+    chart = []
+    if k15:
+        k15_chart = k15[-40:]
+        closes = [k["close"] for k in k15_chart]
+        rsi_vals = rsi(closes, 14)
+        macd_line, signal_line, histogram = macd(closes)
+        for i, k in enumerate(k15_chart):
+            point = {"t": k["time"], "o": k["open"], "h": k["high"],
+                     "l": k["low"], "c": k["close"], "vol": k.get("volume", 0)}
+            if i < len(rsi_vals) and rsi_vals[i] is not None:
+                point["rsi"] = round(rsi_vals[i], 1)
+            if i < len(histogram) and histogram[i] is not None:
+                point["macd"] = round(histogram[i], 2)
+            chart.append(point)
 
     pred_5m = predict(k5, supports, resistances) if k5 else None
     pred_15m = predict(k15, supports, resistances) if k15 else None
