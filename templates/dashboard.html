@@ -993,7 +993,7 @@ function cardHtml(tf,tfk,p){
     '<div class="card-confidence"><div class="confidence-ring">'+
     '<svg viewBox="0 0 48 48"><circle class="bg" cx="24" cy="24" r="'+r+'"/>'+
     '<circle class="fg '+dir+'" cx="24" cy="24" r="'+r+'" stroke-dasharray="'+circ+'" stroke-dashoffset="'+offset+'"/></svg>'+
-    '<span class="confidence-val '+dir+'">'+cf+'%</span></div></div></div></div>'+
+    '<span class="confidence-val '+dir+'">'+cf.toFixed(1)+'%</span></div></div></div></div>'+
     '<div class="card-candle"><span class="label">K线</span><span class="value">'+cl+'</span>'+
     '<span class="divider"></span><span class="label">涨跌</span><span class="value">'+cpTxt+'</span></div></div>';
 }
@@ -1013,7 +1013,7 @@ function renderStats(d){
   h+=statBox('成交量',vol!==null?volTxt(vol):'--','');
   h+=statBox('市场情绪',p5.direction?txt(p5.direction):'--',p5.direction||'');
   h+=statBox('预测市场',pmDir!=='neutral'?txt(pmDir):'观望',pmDir);
-  h+=statBox('置信度',p5.confidence?p5.confidence+'%':'--',p5.direction||'');
+  h+=statBox('置信度',p5.confidence?Number(p5.confidence).toFixed(1)+'%':'--',p5.direction||'');
   document.getElementById('statsContainer').innerHTML=h;
 }
 function statBox(l,v,c){
