@@ -451,6 +451,34 @@ def api_stats():
     return jsonify(log_stats())
 
 
+@app.route("/api/last-predictions")
+def api_last_predictions():
+    """Return recent predictions with evaluation if available."""
+    from prediction_log import get_recent_predictions
+    from prediction_backtest import evaluate_prediction
+
+    entries = get_recent_predictions(20)
+    results = []
+    for e in reversed(entries):  # newest first
+        ev = evaluate_prediction(e)
+        results.append({
+            "ts": e["ts"],
+            "timeframe": e["timeframe"],
+            "price": e["price"],
+            "direction": e["direction"],
+            "score": e["total_score"],
+            "confidence": e["confidence"],
+            "evaluated": ev.get("evaluated", False) if ev else False,
+            "correct": ev.get("correct") if ev and ev.get("evaluated") else None,
+            "actual_direction": ev.get("actual_direction") if ev and ev.get("evaluated") else None,
+            "change_pct": ev.get("change_pct") if ev and ev.get("evaluated") else None,
+        })
+    return jsonify(results[:10])
+
+
+@app.route("/api/backtest")
+
+
 @app.route("/api/backtest")
 def api_backtest():
     """Run prediction accuracy backtest."""

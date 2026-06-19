@@ -192,6 +192,14 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:#0a0b0f;color:#e4e6ea;
 
   <!-- Overview -->
   <div class="or" id="overview"></div>
+
+  <!-- Prediction History -->
+  <div class="cd" style="margin-bottom:16px">
+    <div class="cd-hd">预测历史 · 最近结果</div>
+    <div id="history" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px">
+      <div style="color:var(--t2);text-align:center;padding:20px">加载中...</div>
+    </div>
+  </div>
 </div>
 
 <div class="loading" id="loading"><div class="loading-ring"></div><div class="loading-text">加载中...</div></div>
@@ -368,9 +376,40 @@ function connectSSE(){
   es.onopen=function(){tried=0;}
 }
 
+function loadHistory(){
+  fetch('/api/last-predictions').then(function(r){return r.json();}).then(function(items){
+    var h=document.getElementById('history');
+    if(!items||!items.length){h.innerHTML='<div style="color:var(--t2);text-align:center;padding:20px;grid-column:1/-1">暂无历史预测</div>';return;}
+    var html='';
+    items.slice(0,8).forEach(function(p){
+      var icon=p.direction==='up'?'▲▲':p.direction==='leaning_up'?'▲':p.direction==='down'?'▼▼':p.direction==='leaning_down'?'▼':'◆';
+      var color=p.direction==='up'||p.direction==='leaning_up'?'var(--g)':p.direction==='down'||p.direction==='leaning_down'?'var(--r)':'var(--y)';
+      var ts=p.ts||''; var time=ts.slice(11,19)||ts.slice(0,10);
+      var badge='';
+      if(p.evaluated){
+        badge=p.correct
+          ? '<span style="background:var(--g-dim);color:var(--g);padding:1px 5px;border-radius:3px;font-size:9px;margin-left:4px">✓ 正确</span>'
+          : '<span style="background:var(--r-dim);color:var(--r);padding:1px 5px;border-radius:3px;font-size:9px;margin-left:4px">✗</span>';
+        if(p.change_pct!==null){
+          badge+=' <span style="color:'+(p.change_pct>=0?'var(--g)':'var(--r)')+';font-size:9px">'+(p.change_pct>0?'+':'')+p.change_pct.toFixed(2)+'%</span>';
+        }
+      }
+      html+='<div style="background:var(--bg3);padding:10px;border-radius:8px;text-align:center">'+
+        '<div style="font-size:9px;color:var(--t3);margin-bottom:4px">'+time+' · '+p.timeframe+'</div>'+
+        '<div style="font-size:20px;color:'+color+';line-height:1.3">'+icon+'</div>'+
+        '<div style="font-size:10px;color:var(--t2);margin-top:2px">'+(p.direction==='up'?'强烈看涨':p.direction==='leaning_up'?'偏多':p.direction==='down'?'强烈看跌':p.direction==='leaning_down'?'偏空':'震荡')+'</div>'+
+        '<div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;margin-top:2px">'+(p.score>0?'+':'')+p.score+'</div>'+
+        badge+
+        '</div>';
+    });
+    h.innerHTML=html;
+  }).catch(function(){});
+}
+
 function start(){
-  fetch('/api/analysis').then(function(r){return r.json();}).then(function(d){update(d);}).catch(function(){});
+  fetch('/api/analysis').then(function(r){return r.json();}).then(function(d){update(d);loadHistory();}).catch(function(){});
   connectSSE();
+  setInterval(loadHistory, 10000); // Refresh history every 10s
 }
 document.addEventListener('DOMContentLoaded',start);
 if(document.readyState==='interactive'||document.readyState==='complete')start();
